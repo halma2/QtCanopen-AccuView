@@ -1,7 +1,25 @@
 #!/bin/bash
+
+# This shell script is only for Raspberry PI (model 4b) with touchpad
+
+# Arguments (optional):
+# --venv: the path of the virtual python interpreter, default: ./myvenv
+# --program_dir: the file path of the main python script, default: ./main.py
+# --requirements: the file path of the listed required packages of main.py that pip should install,
+#                 default: ./requirements.txt
+# --rotation: the rotation of the touch pad (normal, left, right, inverted), default: right
+# --log: the file path of the log file where any messages and errors will be written by main.py,
+#        default: ./out.log
+
 set -e
 
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root"
+   exit 1
+fi
+
 # Default values
+# Raspberry PI Touch Display 2 - 7" Portrait
 DISPLAY_NAME=DSI-1
 
 # Rotation setting (normal, left, right, inverted)
@@ -17,13 +35,13 @@ REQUIREMENTS_LIST=requirements.txt
 # Parsing CL arguments
 #-----------------------------
 
-while [$# -gt 0]; do
+while [ $# -gt 0 ]; do
     case "$1" in
         --venv)
             VENV="$2"
             shift 2
             ;;
-       --program-dir)
+       --program_dir)
             QT_PROGRAM="$2"
             shift 2
             ;;
@@ -102,12 +120,11 @@ if grep -q "^\[Seat:\*\]" "$LIGHTDM_CONF"; then
     fi
 fi
 
-
 echo "Configure openbox..."
 
 mkdir -p ~/.config/openbox
 
-cat >/home/$USER/.config/openbox/autostart <<EOF
+cat > ~/.config/openbox/autostart <<EOF
 #!/bin/bash
 
 # Apply screen rotation based on ROTATION variable
@@ -159,7 +176,7 @@ source "$VENV/bin/activate"
 
 pip install --upgrade pip
 
-if [ -f "$REQUIREMENTS_LIST"]; then
+if [ -f "$REQUIREMENTS_LIST" ]; then
     pip install -r "$REQUIREMENTS_LIST"
 else
     echo "Requirements list is not found!"
@@ -167,4 +184,10 @@ fi
 
 deactivate
 
+echo "Enviroment variable DISPLAY=:0 is set in /etc/enviroment"
+echo DISPLAY:=0 >> /etc/enviroment
+
 echo "Installation and configurations are done!"
+echo "Reboot starts after 5 seconds"
+sleep 5
+reboot
