@@ -11,7 +11,6 @@ Pane {
     property int decimalPlaces: 3
     property string header: ""
     property string unit: ""
-    property double maxLength: title.contentWidth
     property var theme
 
     Layout.fillHeight: true
@@ -28,8 +27,6 @@ Pane {
         }
     }
 
-    //padding: 30
-
     background: Rectangle {
         border.color: statPanelRoot.theme.borderColor
         border.width: 1
@@ -37,23 +34,6 @@ Pane {
         radius: 8
     }
 
-    Label {
-        id: subTitleTemplate
-
-        property int length: width
-
-        text: labels[0]
-        visible: false // célja: a leghosszabb @labels méretét adja meg (contentWidth)
-        width: contentWidth
-
-        Component.onCompleted: {
-            for (let i = 0; i < labels.length; i++) {
-                text = labels[i] + ": ";
-                if (contentWidth < length)
-                    length = contentWidth;
-            }
-        }
-    }
     ColumnLayout {
         anchors.fill: parent
 
@@ -70,7 +50,7 @@ Pane {
 
                 Label {
                     text: statPanelRoot.labels[index] + ": "
-                    width: subTitleTemplate.length
+                    width: 70
                 }
                 Label {
                     text: statPanelRoot.statList[index] + " " + statPanelRoot.unit

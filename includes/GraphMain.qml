@@ -22,7 +22,7 @@ Pane {
             if (selectedDiagramId === "top8") {
                 graph1.values = dataList[0];
                 graph1.indexes = dataList[1];
-                graph1.marginRight = graphIndexSample.contentWidth;
+                graph1.marginRight = 40;
             } else {
                 graph1.marginRight = 0;
                 graph1.values = dataList;
@@ -133,18 +133,11 @@ Pane {
             Layout.preferredWidth: 1
             border.color: graphMainRoot.theme.borderColor
         }
-        Text {
-            id: voltSampleLabel
-
-            font.pixelSize: graphMainRoot.theme.fontPixelSize
-            text: "4.444 V"
-            visible: false // célja: a Graph-labels feliratok méretét adja meg (contentWidth)
-        }
 
         // Graph-labels
         Item {
             Layout.fillHeight: true
-            Layout.preferredWidth: voltSampleLabel.contentWidth
+            Layout.preferredWidth: 100
 
             Repeater {
                 model: graph1.values.length

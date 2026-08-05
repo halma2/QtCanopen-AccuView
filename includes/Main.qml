@@ -10,7 +10,6 @@ ApplicationWindow {
 
     property int groupCount: 16
     property string selectedDiagramId: diagramPanel.selectedDiagramId
-    property int sidePanelWidth: groupPanelTitleSample.maxWidth//240
 
     Connections {
         target: controller
@@ -36,25 +35,6 @@ ApplicationWindow {
 
         isMinMaxplot: applicationWindow.selectedDiagramId === "minMax"
     }
-
-    // Sablonok------------------------------------------------------------------------------------------
-    Text {
-        id: graphIndexSample
-
-        font: applicationWindow.font
-        text: "/14" // Talán a GraphsView az indexnek valamennyi helyet fenntart
-        visible: false // A diagram y-tengely feliratainak számolja ki a méretet (ha a formátum "14/14")
-    }
-    Text {
-        id: groupPanelTitleSample
-
-        property real maxWidth: contentWidth + 20 // cím.szélesség + belső margó
-
-        font: applicationWindow.font
-        text: "Szabad portok"
-        visible: false // Ez adja meg a sidePanel minimum szélességét, hogy minden adat kiférjen.
-    }
-    //--------------------------------------------------------------------------------------------------------
 
     RowLayout {
         anchors.fill: parent
@@ -82,7 +62,7 @@ ApplicationWindow {
         SidePanel {
             id: sidePanel
 
-            expandedWidth: applicationWindow.sidePanelWidth
+            expandedWidth: 240
             theme: themeSettings
         }
         DiagramPanel {
@@ -100,7 +80,7 @@ ApplicationWindow {
         ColumnLayout {
             Layout.fillHeight: true
             Layout.margins: 20
-            Layout.maximumWidth: tempPanel.maxLength + Layout.margins * 2
+            Layout.maximumWidth: 220
             spacing: 15
 
             StatPanel {
