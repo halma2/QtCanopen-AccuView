@@ -80,7 +80,7 @@ ApplicationWindow {
         ColumnLayout {
             Layout.fillHeight: true
             Layout.margins: 20
-            Layout.maximumWidth: 220
+            Layout.maximumWidth: 230
             spacing: 15
 
             StatPanel {

@@ -137,7 +137,7 @@ Pane {
         // Graph-labels
         Item {
             Layout.fillHeight: true
-            Layout.preferredWidth: 100
+            Layout.preferredWidth: 110
 
             Repeater {
                 model: graph1.values.length
