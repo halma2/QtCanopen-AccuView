@@ -7,13 +7,8 @@ Pane {
 
     property var previousPanel: null
     property var diagramDefinitions: [ "average", "minimum", "maximum", "top8", "minMax" ]
-    property var graphIndexes: []
-    property int graphMarginRight: 0
-    property var graphMaxValues: []
-    property var graphMinValues: []
-    property var graphValues: []
     property string selectedDiagramId: diagramDefinitions[diagramSwipeView.currentIndex]
-    property alias swipeView: diagramSwipeView
+    property alias view: diagramSwipeView
     property var theme
 
     signal openGroupPanel(int id)
@@ -45,11 +40,12 @@ Pane {
             delegate: Rectangle {
 
                 activeFocusOnTab: false
-                border.color: diagramSwipeView.activeFocus ? diagramPanelRoot.theme.palette.highlight : diagramPanelRoot.theme.borderColor
+                border.color: diagramSwipeView.activeFocus ?
+                    diagramPanelRoot.theme.palette.highlight : diagramPanelRoot.theme.borderColor
                 border.width: diagramSwipeView.activeFocus ? 1 + 1 : 1
                 radius: 8
 
-                Keys.onUpPressed: diagramPanelRoot.previousPanel.forceActiveFocus()
+                Keys.onUpPressed: diagramPanelRoot.previousPanel.focusFirstButton()
 
                 ColumnLayout {
                     anchors.fill: parent

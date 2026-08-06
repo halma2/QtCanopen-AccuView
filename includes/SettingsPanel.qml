@@ -5,18 +5,14 @@ import QtQuick.Layouts
 Column {
     id: settingsPanelRoot
 
-    property int buttonSize: 120
     property var focusMap: [portInput, refreshButton, testButton]
-    property string testStatus: ""
-    property var availablePorts: controller ? controller.availablePorts : []
+    property var previousPanel: null
     property var theme
 
-    Connections {
-        target: controller
-        function onTestFinished(ok) {
-            settingsPanelRoot.testStatus = ok ? '✔' : '❌'
-        }
-    }
+    anchors.fill: parent
+    leftPadding: 0
+    topPadding: 40
+
 
     function focusInitialWidget() {
         portInput.forceActiveFocus();
@@ -32,16 +28,11 @@ Column {
         focusIndex = Math.max(0, Math.min(focusMap.length - 1, focusIndex + step));
         focusMap[focusIndex].forceActiveFocus();
     }
-
-    anchors.fill: parent
-    leftPadding: 0
-    topPadding: 40
-
     Keys.onDownPressed: {
         moveFocus(1);
     }
     Keys.onLeftPressed: {
-        buttonBar.forceActiveFocus();
+        previousPanel.forceActiveFocus();
     }
     Keys.onRightPressed: {
         diagramPanel.swipeView.forceActiveFocus();
@@ -57,13 +48,15 @@ Column {
         id: portInput
 
         font.bold: false
-        height: settingsPanelRoot.buttonSize
+        height: 120
         indicator: null
-        model: settingsPanelRoot.availablePorts
+        property var ports: controller ? controller.availablePorts : []
+
+        model: ports
         width: parent.width
 
         delegate: ItemDelegate {
-            height: settingsPanelRoot.buttonSize
+            height: 120
             width: parent.width
 
             contentItem: Label {
@@ -80,9 +73,9 @@ Column {
         id: refreshButton
 
         font.pixelSize: 70
-        height: settingsPanelRoot.buttonSize
+        height: 120
         text: "🔄"
-        width: settingsPanelRoot.buttonSize
+        width: 120
 
         onClicked: controller.search_ports()
     }
@@ -94,12 +87,19 @@ Column {
             text: "📋☑"
 
             onClicked:  {
-                settingsPanelRoot.testStatus = "⏳"
+                testStatus.text = "⏳"
                 controller.start_test()
+            }
+            Connections {
+                target: controller
+                function onTestFinished(ok) {
+                    testStatus.text = ok ? '✔' : '❌'
+                }
             }
         }
         Label {
-            text: settingsPanelRoot.testStatus
+            id: testStatus
+            text: ""
         }
     }
 }

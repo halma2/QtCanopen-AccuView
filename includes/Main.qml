@@ -8,32 +8,16 @@ import QtQml
 ApplicationWindow {
     id: applicationWindow
 
-    property int groupCount: 16
-    property string selectedDiagramId: diagramPanel.selectedDiagramId
-
-    Connections {
-        target: controller
-
-        function onGroupCountChanged(count) {
-            groupCount = count;
-        }
-        function onErrorOccurred(msg) {
-            errMsgBox.text = msg;
-            errMsgBox.open();
-        }
-    }
-
     font.pixelSize: themeSettings.fontPixelSize
     font.bold: true
     palette: themeSettings.projectPalette
     visibility: Window.FullScreen
     visible: true
 
-
     Theme {
         id: themeSettings
 
-        isMinMaxplot: applicationWindow.selectedDiagramId === "minMax"
+        isMinMaxplot: diagramPanel.selectedDiagramId === "minMax"
     }
 
     RowLayout {
@@ -43,26 +27,17 @@ ApplicationWindow {
         ButtonBar {
             id: buttonBar
 
+            appController: controller
             anyPanel: anyPanel
             diagramPanel: diagramPanel
-            groupCount: applicationWindow.groupCount
             groupPanel: groupPanel
-            panelOpened: sidePanel.opened
             settingsPanel: settingsPanel
-            sidePanel: sidePanel
+            sidePanelContainer: sidePanel
             theme: themeSettings
-
-            onPanelCloseRequested: {
-                sidePanel.closePanel();
-            }
-            onPanelOpenRequested: function (panel) {
-                sidePanel.openPanel(panel);
-            }
         }
-        SidePanel {
+        SidePanelContainer {
             id: sidePanel
 
-            expandedWidth: 240
             theme: themeSettings
         }
         DiagramPanel {
@@ -110,11 +85,20 @@ ApplicationWindow {
 
         buttons: MessageDialog.Ok
         title: "Hiba"
+
+        Connections {
+            target: controller
+            function onErrorOccurred(msg) {
+                errMsgBox.text = msg;
+                errMsgBox.open()
+            }
+        }
     }
     Component {
         id: settingsPanel
 
         SettingsPanel {
+            previousPanel: buttonBar
             theme: themeSettings
         }
     }
@@ -122,7 +106,6 @@ ApplicationWindow {
         id: groupPanel
 
         GroupPanel {
-            groupCount: applicationWindow.groupCount
             previousPanel: buttonBar
             theme: themeSettings
         }

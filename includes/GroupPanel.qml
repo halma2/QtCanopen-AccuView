@@ -6,7 +6,7 @@ ColumnLayout {
     id: groupPanelRoot
 
     property int selectedGroupId: controller ? controller.selected_group_id : 0
-    property int groupCount: 0
+    property int groupCount: 16
     property var selectedGroupVoltList: []
     property var selectedGroupTempList: []
     property var previousPanel
@@ -20,6 +20,9 @@ ColumnLayout {
 
     Connections {
         target: controller
+        function onGroupCountChanged(count) {
+            groupCount = count;
+        }
         function onGroupDataChanged(vList, tList) {
             selectedGroupVoltList = vList;
             selectedGroupTempList = tList;
@@ -51,22 +54,7 @@ ColumnLayout {
         spacing: 40
 
         onCurrentIndexChanged: {
-            if (blockSync)
-                return;
-            if (controller && groupPanelRoot.selectedGroupId !== currentIndex)
-                controller.get_cell_group(currentIndex);
-        }
-
-        Connections {
-            target: groupPanelRoot
-
-            function onSelectedGroupIdChanged() {
-                if (moduleSwipeView.currentIndex !== groupPanelRoot.selectedGroupId) {
-                    moduleSwipeView.blockSync = true;
-                    moduleSwipeView.currentIndex = groupPanelRoot.selectedGroupId;
-                    moduleSwipeView.blockSync = false;
-                }
-            }
+            controller.get_cell_group(currentIndex);
         }
 
         Repeater {

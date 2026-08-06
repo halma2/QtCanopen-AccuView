@@ -1,6 +1,7 @@
 import struct
 import time
 
+from can import CanError, CanOperationError
 from canopen import Network, SdoCommunicationError
 
 
@@ -20,6 +21,7 @@ class CanService:
         self.t_count = t_count
         self.port: str | None = None
         self._connected = False
+        self._notifier_error = None
         self.eds_path = eds_path
         self._create_network()
 
@@ -33,13 +35,21 @@ class CanService:
     def connect(self):
         if self._connected:
             return
-        self.network.connect(bustype="slcan", channel=self.port, bitrate=250_000)
+        self._notifier_error = None
+        try:
+            self.network.connect(bustype="slcan", channel=self.port, bitrate=250_000)
+        except (CanError, OSError):
+            self._release_broken_connection()
+            raise
         self._connected = True
     
     def read_measurement(self):
-        for attempt in range(3):
+        if self._notifier_error is not None:
+            raise CanOperationError("CAN receiver stopped") from self._notifier_error
+
+        for attempt in range(2):
             try:
-                return self._read_measurement_once()
+                return self.read_decode_sdo()
             except SdoCommunicationError:
                 if attempt == 2:
                     raise
@@ -48,7 +58,7 @@ class CanService:
                 self._create_network()
                 self.connect()
 
-    def _read_measurement_once(self):
+    def read_decode_sdo(self):
         """Az eds-ben levő indexeken levő SDO üzeneteket kéri le CAN buszon és a megfelelő mértékegységre alaktíja át"""
         voltage_bytes = self.node.sdo["Voltage"].raw
         temperature_bytes = self.node.sdo["Temperature"].raw
@@ -87,9 +97,19 @@ class CanService:
         if not self._connected:
             return
         try:
-            self.network.sync.stop()
+            try:
+                self.network.sync.stop()
+            except (CanError, OSError, RuntimeError):
+                pass
         finally:
             try:
                 self.network.disconnect()
+            except (CanError, OSError, RuntimeError):
+                pass
             finally:
-                self._connected = False
+                self._release_broken_connection()
+
+    def _release_broken_connection(self):
+        self._connected = False
+        self.network.bus = None
+        self.network.notifier = None

@@ -7,7 +7,6 @@ Pane {
 
     property int currentPanelWidth: opened ? expandedWidth : 0
     property int expandedWidth: 240
-    property alias loader: sidePanelLoader
     property bool opened: false
     property var theme
 

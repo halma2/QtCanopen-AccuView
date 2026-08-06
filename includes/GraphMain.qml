@@ -2,14 +2,13 @@ import QtQuick
 import QtGraphs
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
-import "QtGraphAutoAxisY.js" as QtGraph_autoAxisY
+import "QtGraphAutoAxisY.js" as QtGraphAutoAxisY
 
 Pane {
     id: graphMainRoot
 
     property var theme
     property string selectedDiagramId: "average"
-    property alias values: graph1.values
 
     signal openGroupPanel(int id)
 
@@ -92,7 +91,7 @@ Pane {
                         dataBarSet.append(Number(values[i]));
                     }
                     axisX.categories = displayedIndexes;
-                    let currentMinMax = QtGraph_autoAxisY.get_custom_axisY(values, graph1);
+                    let currentMinMax = QtGraphAutoAxisY.get_custom_axisY(values, graph1);
                     axisY.min = currentMinMax[0];
                     axisY.max = currentMinMax[1];
                     axisY.tickInterval = 0.1;

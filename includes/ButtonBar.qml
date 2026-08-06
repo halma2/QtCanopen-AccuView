@@ -6,15 +6,12 @@ Pane {
     id: buttonBarRoot
 
     property bool busActive: false
-    property var anyPanel
-    property alias activePanelIndex: buttonBar.activePanelIndex
-    property var diagramPanel
-    property int groupCount: 0
-    property var groupPanel
-    property alias listView: buttonBar
-    property bool panelOpened: false
+    property var appController
     property var settingsPanel
-    property var sidePanel
+    property var anyPanel
+    property var diagramPanel
+    property var groupPanel
+    property var sidePanelContainer
     property var theme
 
     Layout.bottomMargin: 20
@@ -22,23 +19,20 @@ Pane {
     Layout.preferredWidth: 140
     Layout.topMargin: 20
 
-    signal panelCloseRequested
-    signal panelOpenRequested(var panel)
-
-    function activatePanel(panel) { // used by DiagramPanel
-        const items = buttonBar.model;
+    function activatePanel(panel) { // used by DiagramPanel: opening group panel
+        const items = buttonBarView.model;
         for (let index = 0; index < items.length; index++) {
             if (items[index].panel === panel) {
-                activePanelIndex = index;
+                buttonBarView.activePanelIndex = index;
                 return;
             }
         }
     }
 
     Connections {
-        target: controller
+        target: buttonBarRoot.appController
         function onErrorOccurred() {
-            busActive = false
+            buttonBarRoot.busActive = false
         }
     }
 
@@ -50,7 +44,7 @@ Pane {
     }
 
     ListView {
-        id: buttonBar
+        id: buttonBarView
 
         property int activePanelIndex: 1
         property var barRoot: buttonBarRoot
@@ -100,19 +94,20 @@ Pane {
             activeFocusOnTab: true
             font.pixelSize: 70
             height: parent.width
-            highlighted: listView.activePanelIndex === index && barRoot.panelOpened
+            highlighted: listView.activePanelIndex === index && barRoot.sidePanelContainer.opened
             text: modelData.icon
             width: listView.width
 
             background: Rectangle {
-                border.color: barButton.activeFocus ? barButton.barRoot.theme.projectPalette.highlight : barButton.barRoot.theme.borderColor
+                border.color: barButton.activeFocus ?
+                    barRoot.theme.projectPalette.highlight : barRoot.theme.borderColor
                 border.width: barButton.activeFocus ? 1 + 1 : 1
                 color: {
                     if (parent.down)
-                        return barButton.barRoot.theme.buttonPressedColor;
+                        return barRoot.theme.buttonPressedColor;
                     else if (barButton.highlighted)
-                        return barButton.barRoot.theme.buttonHighlightedColor;
-                    return barButton.barRoot.theme.buttonBackgroundColor;
+                        return barRoot.theme.buttonHighlightedColor;
+                    return barRoot.theme.buttonBackgroundColor;
                 }
                 height: parent.height
                 radius: 8
@@ -123,10 +118,10 @@ Pane {
                 switchButtonFocus(1);
             }
             Keys.onRightPressed: {
-                if (barRoot.panelOpened)
-                    barRoot.sidePanel.focusLoadedPanel();
+                if (barRoot.sidePanelContainer.opened)
+                    barRoot.sidePanelContainer.focusLoadedPanel();
                 else
-                    barRoot.diagramPanel.swipeView.forceActiveFocus();
+                    barRoot.diagramPanel.view.forceActiveFocus();
             }
             Keys.onUpPressed: {
                 switchButtonFocus(-1);
@@ -134,27 +129,28 @@ Pane {
 
             onClicked: {
                 if (modelData.action === "connect") {
-                    if (barRoot.busActive)
-                        controller.stop_reading()
-                    else
-                        controller.start_reading()
-                    busActive = !busActive;
+                    if (barRoot.busActive) {
+                        barRoot.busActive = false;
+                        barRoot.appController.stop_reading();
+                    } else {
+                        barRoot.busActive = true;
+                        barRoot.appController.start_reading();
+                    }
                     return;
                 }
                 if (modelData.action === "exit") {
                     Qt.quit();
                     return;
                 }
-                // Close sidePanel
-                if (barRoot.panelOpened && listView.activePanelIndex === index) {
-                    barRoot.panelCloseRequested();
-                    return;
-                } // Open sidePanel
-                listView.activePanelIndex = index;
-                barRoot.panelOpenRequested(modelData.panel);
-                if (modelData.action === "openGroupPanel") {
-                    controller.get_cell_group(controller.selected_group_id);
-                }
+                // Close sidePanelContainer
+                if (barRoot.sidePanelContainer.opened && listView.activePanelIndex === index) {
+                    barRoot.sidePanelContainer.closePanel(modelData.panel)
+                    return
+                } // Open sidePanelContainer
+                listView.activePanelIndex = index
+                barRoot.sidePanelContainer.openPanel(modelData.panel)
+                if (modelData.action === "openGroupPanel")
+                    barRoot.appController.get_cell_group(barRoot.appController.selected_group_id)
             }
         }
     }

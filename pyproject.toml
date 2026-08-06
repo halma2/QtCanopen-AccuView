@@ -21,7 +21,7 @@ files = [
     "includes/AnyPanel.qml",
     "includes/GroupPanel.qml",
     "includes/SettingsPanel.qml",
-    "includes/SidePanel.qml",
+    "SidePanelContainer.qml",
     "includes/ButtonBar.qml",
     "includes/StatPanel.qml",
     "includes/DiagramPanel.qml",

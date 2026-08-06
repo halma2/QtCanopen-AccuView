@@ -173,6 +173,7 @@ class ApplicationController(QObject):
             return
         if not self.can_service.port:
             self.ui.report_error("CAN-port is not selected!")
+            self.ui.finish_test(False)
             return
         if self.test_thread is not None and self.test_thread.isRunning():
             return

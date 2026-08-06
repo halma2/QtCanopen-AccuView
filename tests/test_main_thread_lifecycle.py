@@ -93,6 +93,18 @@ class ApplicationControllerThreadLifecycleTest(unittest.TestCase):
 
         controller.ui.report_error.assert_called_once_with(controller.startup_error)
 
+    def test_start_test_reports_failure_when_no_port_is_selected(self):
+        controller = ApplicationController.__new__(ApplicationController)
+        controller.read_stop_event = Mock()
+        controller.can_service = Mock()
+        controller.can_service.port = None
+        controller.ui = Mock()
+
+        controller.start_test()
+
+        controller.ui.report_error.assert_called_once_with("CAN-port is not selected!")
+        controller.ui.finish_test.assert_called_once_with(False)
+
     def test_invalid_diagram_type_is_reported(self):
         controller = ApplicationController.__new__(ApplicationController)
         controller.diagram_type = DiagramType.AVERAGE
