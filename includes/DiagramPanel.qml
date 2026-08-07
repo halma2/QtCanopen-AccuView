@@ -21,7 +21,6 @@ Pane {
     SwipeView {
         id: diagramSwipeView
 
-        activeFocusOnTab: true
         anchors.fill: parent
         currentIndex: 0
         spacing: 0
@@ -37,7 +36,6 @@ Pane {
 
             delegate: Rectangle {
 
-                activeFocusOnTab: false
                 border.color: diagramSwipeView.visualFocus ?
                     diagramPanelRoot.theme.palette.highlight : diagramPanelRoot.theme.borderColor
                 border.width: 1

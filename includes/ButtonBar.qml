@@ -15,18 +15,18 @@ Pane {
     Layout.preferredWidth: 140
     Layout.topMargin: 20
 
-    function activatePanel(panel) { // used by DiagramPanel: opening group panel
-        const items = buttonBarView.model;
-        for (let index = 0; index < items.length; index++) {
-            if (items[index].panel === panel) {
-                buttonBarView.activePanelIndex = index;
-                return;
+    signal openPanel(string panel)
+    signal closePanel()
+    signal groupPanelOpenedFromDiagram()
+
+    onGroupPanelOpenedFromDiagram: {
+        for (let i = 0; i < buttonBarView.model.length; i++) {
+            if (buttonBarView.model[i].panel_name === "group") {
+                buttonBarView.activePanelIndex = i
+                return
             }
         }
     }
-
-    signal openPanel(string panel)
-    signal closePanel()
 
     Connections {
         target: buttonBarRoot.appController

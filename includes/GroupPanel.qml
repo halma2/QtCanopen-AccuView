@@ -25,14 +25,6 @@ ColumnLayout {
         }
     }
 
-    function selectGroup(groupId) {
-        let nextGroupId = Math.max(0, Math.min(groupCount - 1, groupId));
-        if (controller)
-            controller.get_cell_group(nextGroupId);
-        else
-            selectedGroupId = nextGroupId;//TODO
-    }
-
     SwipeView {
         id: moduleSwipeView
 

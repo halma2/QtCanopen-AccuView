@@ -53,7 +53,7 @@ ApplicationWindow {
 
             onOpenGroupPanel: function (groupId) {
                 controller.get_cell_group(groupId);
-                buttonBar.activatePanel(groupPanel);
+                buttonBar.groupPanelOpenedFromDiagram()
                 sidePanel.openPanel(groupPanel);
             }
         }
