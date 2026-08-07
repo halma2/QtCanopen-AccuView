@@ -56,7 +56,7 @@ Pane {
                     GraphMain {
                         id: graphMain
 
-                        Layout.margins: 10
+                        Layout.margins: 5
                         Layout.topMargin: 0
                         theme: diagramPanelRoot.theme
                         selectedDiagramId: diagramPanelRoot.selectedDiagramId
@@ -69,7 +69,7 @@ Pane {
                     GraphMinMax {
                         id: graphMinMax
 
-                        Layout.margins: 10
+                        Layout.margins: 5
                         Layout.topMargin: 0
                         theme: diagramPanelRoot.theme
                         visible: diagramPanelRoot.selectedDiagramId === "minMax"
