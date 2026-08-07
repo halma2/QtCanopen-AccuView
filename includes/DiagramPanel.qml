@@ -47,7 +47,6 @@ Pane {
                     Text {
                         Layout.fillWidth: true
                         Layout.preferredHeight: implicitHeight
-                        Layout.topMargin: 10
                         font.bold: true
                         font.pixelSize: diagramPanelRoot.theme.fontPixelSize
                         horizontalAlignment: Text.AlignHCenter
@@ -58,6 +57,7 @@ Pane {
                         id: graphMain
 
                         Layout.margins: 10
+                        Layout.topMargin: 0
                         theme: diagramPanelRoot.theme
                         selectedDiagramId: diagramPanelRoot.selectedDiagramId
                         visible: diagramPanelRoot.selectedDiagramId !== "minMax"
@@ -70,6 +70,7 @@ Pane {
                         id: graphMinMax
 
                         Layout.margins: 10
+                        Layout.topMargin: 0
                         theme: diagramPanelRoot.theme
                         visible: diagramPanelRoot.selectedDiagramId === "minMax"
 
