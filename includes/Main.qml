@@ -28,12 +28,18 @@ ApplicationWindow {
             id: buttonBar
 
             appController: controller
-            anyPanel: anyPanel
-            diagramPanel: diagramPanel
-            groupPanel: groupPanel
-            settingsPanel: settingsPanel
-            sidePanelContainer: sidePanel
+            containerOpened: sidePanel.opened
             theme: themeSettings
+
+            onOpenPanel: function (panel_name) {
+                let panel_dict = {
+                    "settings": settingsPanel,
+                    "group": groupPanel,
+                    "any": anyPanel
+                }
+                sidePanel.openPanel(panel_dict[panel_name])
+            }
+            onClosePanel: sidePanel.closePanel()
         }
         SidePanelContainer {
             id: sidePanel

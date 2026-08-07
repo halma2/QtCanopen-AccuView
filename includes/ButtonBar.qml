@@ -6,11 +6,8 @@ Pane {
     id: buttonBarRoot
 
     property bool busActive: false
+    property bool containerOpened: false
     property var appController
-    property var settingsPanel
-    property var anyPanel
-    property var diagramPanel
-    property var groupPanel
     property var sidePanelContainer
     property var theme
 
@@ -28,6 +25,9 @@ Pane {
             }
         }
     }
+
+    signal openPanel(string panel)
+    signal closePanel()
 
     Connections {
         target: buttonBarRoot.appController
@@ -60,17 +60,17 @@ Pane {
             {
                 icon: "⚙",
                 action: "openPanel",
-                panel: buttonBarRoot.settingsPanel
+                panel_name: "settings"
             },
             {
                 icon: "-",
                 action: "openPanel",
-                panel: buttonBarRoot.anyPanel
+                panel_name: "any"
             },
             {
                 icon: "🔢",
                 action: "openGroupPanel",
-                panel: buttonBarRoot.groupPanel
+                panel_name: "group"
             },
             {
                 icon: "✖",
@@ -94,7 +94,7 @@ Pane {
             activeFocusOnTab: true
             font.pixelSize: 70
             height: parent.width
-            highlighted: listView.activePanelIndex === index && barRoot.sidePanelContainer.opened
+            highlighted: listView.activePanelIndex === index && barRoot.containerOpened
             text: modelData.icon
             width: listView.width
 
@@ -118,7 +118,7 @@ Pane {
                 switchButtonFocus(1);
             }
             Keys.onRightPressed: {
-                if (barRoot.sidePanelContainer.opened)
+                if (barRoot.containerOpened)
                     barRoot.sidePanelContainer.focusLoadedPanel();
                 else
                     barRoot.diagramPanel.view.forceActiveFocus();
@@ -143,12 +143,12 @@ Pane {
                     return;
                 }
                 // Close sidePanelContainer
-                if (barRoot.sidePanelContainer.opened && listView.activePanelIndex === index) {
-                    barRoot.sidePanelContainer.closePanel(modelData.panel)
+                if (barRoot.containerOpened && listView.activePanelIndex === index) {
+                    closePanel()
                     return
                 } // Open sidePanelContainer
                 listView.activePanelIndex = index
-                barRoot.sidePanelContainer.openPanel(modelData.panel)
+                openPanel(modelData.panel_name)
                 if (modelData.action === "openGroupPanel")
                     barRoot.appController.get_cell_group(barRoot.appController.selected_group_id)
             }
