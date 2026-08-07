@@ -45,7 +45,7 @@ Pane {
                 border.width: diagramSwipeView.activeFocus ? 1 + 1 : 1
                 radius: 8
 
-                Keys.onUpPressed: diagramPanelRoot.previousPanel.focusFirstButton()
+                Keys.onUpPressed: diagramPanelRoot.previousPanel.forceActiveFocus()
 
                 ColumnLayout {
                     anchors.fill: parent
