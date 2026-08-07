@@ -8,7 +8,6 @@ Pane {
     property bool busActive: false
     property bool containerOpened: false
     property var appController
-    property var sidePanelContainer
     property var theme
 
     Layout.bottomMargin: 20
@@ -85,12 +84,6 @@ Pane {
             property var barRoot: listView.barRoot
             property var listView: ListView.view
 
-            function switchButtonFocus(step) {
-                let button = listView.itemAtIndex(index + step);
-                if (button)
-                    button.forceActiveFocus();
-            }
-
             activeFocusOnTab: true
             font.pixelSize: 70
             height: parent.width
@@ -99,9 +92,9 @@ Pane {
             width: listView.width
 
             background: Rectangle {
-                border.color: barButton.activeFocus ?
+                border.color: barButton.visualFocus ?
                     barRoot.theme.projectPalette.highlight : barRoot.theme.borderColor
-                border.width: barButton.activeFocus ? 1 + 1 : 1
+                border.width: 1
                 color: {
                     if (parent.down)
                         return barRoot.theme.buttonPressedColor;
@@ -112,19 +105,6 @@ Pane {
                 height: parent.height
                 radius: 8
                 width: parent.width
-            }
-
-            Keys.onDownPressed: {
-                switchButtonFocus(1);
-            }
-            Keys.onRightPressed: {
-                if (barRoot.containerOpened)
-                    barRoot.sidePanelContainer.focusLoadedPanel();
-                else
-                    barRoot.diagramPanel.view.forceActiveFocus();
-            }
-            Keys.onUpPressed: {
-                switchButtonFocus(-1);
             }
 
             onClicked: {

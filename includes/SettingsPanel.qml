@@ -5,41 +5,11 @@ import QtQuick.Layouts
 Column {
     id: settingsPanelRoot
 
-    property var focusMap: [portInput, refreshButton, testButton]
-    property var previousPanel: null
     property var theme
 
     anchors.fill: parent
     leftPadding: 0
     topPadding: 40
-
-
-    function focusInitialWidget() {
-        portInput.forceActiveFocus();
-    }
-    function moveFocus(step) {
-        let focusIndex = 0;
-        for (let i = 0; i < focusMap.length; i++) {
-            if (focusMap[i].activeFocus) {
-                focusIndex = i;
-                break;
-            }
-        }
-        focusIndex = Math.max(0, Math.min(focusMap.length - 1, focusIndex + step));
-        focusMap[focusIndex].forceActiveFocus();
-    }
-    Keys.onDownPressed: {
-        moveFocus(1);
-    }
-    Keys.onLeftPressed: {
-        previousPanel.forceActiveFocus();
-    }
-    Keys.onRightPressed: {
-        diagramPanel.swipeView.forceActiveFocus();
-    }
-    Keys.onUpPressed: {
-        moveFocus(-1);
-    }
 
     Label {
         text: "Szabad portok"

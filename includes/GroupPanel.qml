@@ -9,14 +9,10 @@ ColumnLayout {
     property int groupCount: 16
     property var selectedGroupVoltList: []
     property var selectedGroupTempList: []
-    property var previousPanel
     property var theme
 
-
-    Layout.fillWidth: true
     Layout.alignment: Qt.AlignHCenter
     anchors.topMargin: 10
-    focus: true
 
     Connections {
         target: controller
@@ -29,46 +25,35 @@ ColumnLayout {
         }
     }
 
-    function focusInitialWidget() {
-        moduleSwipeView.forceActiveFocus();
-    }
-
     function selectGroup(groupId) {
         let nextGroupId = Math.max(0, Math.min(groupCount - 1, groupId));
         if (controller)
             controller.get_cell_group(nextGroupId);
         else
-            selectedGroupId = nextGroupId;
+            selectedGroupId = nextGroupId;//TODO
     }
 
     SwipeView {
         id: moduleSwipeView
 
-        // Megakadályozza a visszacsatolást inicializáláskor
-        property bool blockSync: false
-
-        activeFocusOnTab: true
         currentIndex: groupPanelRoot.selectedGroupId
         height: parent.height
         Layout.fillWidth: true
         spacing: 40
 
         onCurrentIndexChanged: {
-            controller.get_cell_group(currentIndex);
+            if (controller)
+                controller.get_cell_group(currentIndex);
         }
 
         Repeater {
             model: groupPanelRoot.groupCount
 
             delegate: Rectangle {
-                activeFocusOnTab: false
-                border.color: moduleSwipeView.activeFocus ? theme.palette.highlight : theme.borderColor
-                border.width: moduleSwipeView.activeFocus ? 1+1 : 1
+                border.color: moduleSwipeView.visualFocus ? theme.palette.highlight : theme.borderColor
+                border.width: 1
                 color: theme.groupSwipeBackgroundColor
-                focus: false
                 radius: 8
-
-                Keys.onUpPressed: groupPanelRoot.previousPanel.forceActiveFocus();
 
                 ColumnLayout {
                     width: parent.width

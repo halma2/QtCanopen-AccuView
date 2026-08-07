@@ -5,10 +5,8 @@ import QtQuick.Layouts
 Pane {
     id: diagramPanelRoot
 
-    property var previousPanel: null
     property var diagramDefinitions: [ "average", "minimum", "maximum", "top8", "minMax" ]
     property string selectedDiagramId: diagramDefinitions[diagramSwipeView.currentIndex]
-    property alias view: diagramSwipeView
     property var theme
 
     signal openGroupPanel(int id)
@@ -40,12 +38,10 @@ Pane {
             delegate: Rectangle {
 
                 activeFocusOnTab: false
-                border.color: diagramSwipeView.activeFocus ?
+                border.color: diagramSwipeView.visualFocus ?
                     diagramPanelRoot.theme.palette.highlight : diagramPanelRoot.theme.borderColor
-                border.width: diagramSwipeView.activeFocus ? 1 + 1 : 1
+                border.width: 1
                 radius: 8
-
-                Keys.onUpPressed: diagramPanelRoot.previousPanel.forceActiveFocus()
 
                 ColumnLayout {
                     anchors.fill: parent

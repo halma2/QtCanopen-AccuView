@@ -49,7 +49,6 @@ ApplicationWindow {
         DiagramPanel {
             id: diagramPanel
 
-            previousPanel: buttonBar
             theme: themeSettings
 
             onOpenGroupPanel: function (groupId) {
@@ -104,7 +103,6 @@ ApplicationWindow {
         id: settingsPanel
 
         SettingsPanel {
-            previousPanel: buttonBar
             theme: themeSettings
         }
     }
@@ -112,7 +110,6 @@ ApplicationWindow {
         id: groupPanel
 
         GroupPanel {
-            previousPanel: buttonBar
             theme: themeSettings
         }
     }
