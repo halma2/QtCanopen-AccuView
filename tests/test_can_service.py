@@ -3,6 +3,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+from canopen import SdoCommunicationError
+
 from canopen_app.can_service import CanService, CanServiceError
 
 
@@ -93,6 +95,23 @@ class CanServiceTest(unittest.TestCase):
             ValueError, "Temperature data contains an unexpected number"
         ):
             service.read_measurement()
+
+    def test_read_measurement_propagates_error_after_retry(self):
+        service = self._service_with_measurement(bytes(12 * 2), bytes(2 * 2))
+        communication_error = SdoCommunicationError("Transfer aborted")
+        service.read_decode_sdo = Mock(side_effect=communication_error)
+        service._create_network = Mock()
+        service.disconnect = Mock()
+        service.connect = Mock()
+
+        with patch("canopen_app.can_service.time.sleep"):
+            with self.assertRaises(SdoCommunicationError) as raised:
+                service.read_measurement()
+
+        self.assertIs(raised.exception, communication_error)
+
+        service.disconnect.assert_called_once_with()
+        service.connect.assert_called_once_with()
 
 if __name__ == "__main__":
     unittest.main()

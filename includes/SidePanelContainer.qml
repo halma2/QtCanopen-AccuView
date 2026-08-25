@@ -5,10 +5,9 @@ import QtQuick.Layouts
 Pane {
     id: sidePanelRoot
 
-    property int currentPanelWidth: opened ? expandedWidth : 0
-    property int expandedWidth: 240
+    Layout.preferredWidth: opened ? Layout.maximumWidth : 0
+    Layout.minimumWidth: 0
     property bool opened: false
-    property var theme
 
     function closePanel() {
         opened = false;
@@ -26,21 +25,15 @@ Pane {
         opened = true;
     }
 
-    Layout.bottomMargin: 20
-    Layout.fillHeight: true
-    Layout.maximumWidth: expandedWidth
-    Layout.minimumWidth: 0
-    Layout.preferredWidth: currentPanelWidth
-    Layout.topMargin: 20
     clip: true
 
     background: Rectangle {
-        border.color: sidePanelRoot.theme.borderColor
+        color: "#60000000"
+        border.color: "white"
         border.width: 1
-        color: sidePanelRoot.theme.sidePanelBackgroundColor
         radius: 8
     }
-    Behavior on currentPanelWidth {
+    Behavior on Layout.preferredWidth {
         NumberAnimation {
             duration: 250
             easing.type: Easing.InOutQuad

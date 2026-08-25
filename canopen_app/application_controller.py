@@ -100,6 +100,7 @@ class ApplicationController(QObject):
         except (
             SdoCommunicationError,
             can.exceptions.CanOperationError,
+            can.exceptions.CanError,
             AttributeError,
             RuntimeError,
             ValueError,

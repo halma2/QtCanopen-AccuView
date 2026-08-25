@@ -47,11 +47,12 @@ class CanService:
         if self._notifier_error is not None:
             raise CanOperationError("CAN receiver stopped") from self._notifier_error
 
-        for attempt in range(2):
+        max_attempts = 3
+        for attempt in range(max_attempts):
             try:
                 return self.read_decode_sdo()
             except SdoCommunicationError:
-                if attempt == 2:
+                if attempt == max_attempts - 1:
                     raise
                 self.disconnect()
                 time.sleep(0.5)

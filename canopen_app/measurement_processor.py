@@ -132,7 +132,7 @@ class MeasurementProcessor:
         value_list = [v for i, v in bottom_i_v + top_i_v]
         indices_list = [i for i, v in bottom_i_v + top_i_v]
         renamed_indices = [
-            str(x // self.group_count + 1) + "/" + str(x % self.group_count + 1)
+            str(x // self.v_count + 1) + "/" + str(x % self.v_count + 1)
             for x in indices_list
         ]
         return [value_list, renamed_indices]

@@ -1,41 +1,59 @@
 import QtQuick
-import QtGraphs // Qt 6.11
 import QtQuick.Layouts
 import QtQuick.Controls.Basic
 import QtQuick.Dialogs
-import QtQml
+
 
 ApplicationWindow {
     id: applicationWindow
 
-    font.pixelSize: themeSettings.fontPixelSize
+    font.pixelSize: 28
     font.bold: true
-    palette: themeSettings.projectPalette
+    font.family: "Arial"
     visibility: Window.FullScreen
     visible: true
+    palette.windowText: "white"
 
-    Theme {
-        id: themeSettings
-
-        isMinMaxplot: diagramPanel.selectedDiagramId === "minMax"
+    background: Rectangle {
+        id: mainBackground
+        gradient: Gradient {
+            GradientStop {
+                position: 0.0
+                color: "#FF202020"
+            }
+            GradientStop {
+                position: 1.0
+                color: "seagreen"
+            }
+        }
     }
 
-    RowLayout {
+    GridLayout {
         anchors.fill: parent
-        spacing: 0
+        columns: 4
+        rows: 2
+        anchors.margins: 20
+        columnSpacing: 10
 
         ButtonBar {
             id: buttonBar
 
+            Layout.fillHeight: true
+            Layout.preferredWidth: 140
+            Layout.column: 0
+            Layout.row: 0
+            Layout.rowSpan: 2
+
             appController: controller
             containerOpened: sidePanel.opened
-            theme: themeSettings
 
             onOpenPanel: function (panel_name) {
+                // Új gomb hozzáadásakor az új komponenst és a ButtonBar-model nevét itt kell megadni.
                 let panel_dict = {
-                    "settings": settingsPanel,
-                    "group": groupPanel,
-                    "any": anyPanel
+                    // "ButtonBar.buttonBarView.modelData.panel_name" : component,
+                    "settings": settingsComponent,
+                    "group": groupComponent,
+                    "any": anyComponent
                 }
                 sidePanel.openPanel(panel_dict[panel_name])
             }
@@ -44,45 +62,52 @@ ApplicationWindow {
         SidePanelContainer {
             id: sidePanel
 
-            theme: themeSettings
+            Layout.column: 1
+            Layout.row: 0
+            Layout.rowSpan: 2
+            Layout.fillHeight: true
+            Layout.maximumWidth: 245
         }
         DiagramPanel {
             id: diagramPanel
 
-            theme: themeSettings
+            Layout.fillHeight: true
+            Layout.fillWidth: true
+            Layout.row: 0
+            Layout.rowSpan: 2
+            Layout.column: 2
 
             onOpenGroupPanel: function (groupId) {
                 controller.get_cell_group(groupId);
                 buttonBar.groupPanelOpenedFromDiagram()
-                sidePanel.openPanel(groupPanel);
+                sidePanel.openPanel(groupComponent);
             }
         }
-        ColumnLayout {
-            Layout.fillHeight: true
-            Layout.margins: 20
+        StatPanel {
+            id: voltPanel
+
+            Layout.row: 0
+            Layout.column: 3
             Layout.maximumWidth: 230
-            spacing: 15
+            Layout.minimumWidth: 230
+            Layout.fillHeight: true
+            statOffset: 0
+            decimalPlaces: 3
+            title: "Feszültség:"
+            unit: "V"
+        }
+        StatPanel {
+            id: tempPanel
 
-            StatPanel {
-                id: voltPanel
-
-                Layout.fillWidth: true
-                statOffset: 0
-                decimalPlaces: 3
-                header: "Feszültség:"
-                theme: themeSettings
-                unit: "V"
-            }
-            StatPanel {
-                id: tempPanel
-
-                Layout.fillWidth: true
-                statOffset: 3
-                decimalPlaces: 1
-                theme: themeSettings
-                header: "Hőmérséklet:"
-                unit: "°C"
-            }
+            Layout.row: 1
+            Layout.column: 3
+            Layout.maximumWidth: 230
+            Layout.minimumWidth: 230
+            Layout.fillHeight: true
+            statOffset: 3
+            decimalPlaces: 1
+            title: "Hőmérséklet:"
+            unit: "°C"
         }
     }
     MessageDialog {
@@ -100,23 +125,18 @@ ApplicationWindow {
         }
     }
     Component {
-        id: settingsPanel
+        id: settingsComponent
 
-        SettingsPanel {
-            theme: themeSettings
-        }
+        SettingsComponent {}
     }
     Component {
-        id: groupPanel
+        id: groupComponent
 
-        GroupPanel {
-            theme: themeSettings
-        }
+        GroupComponent {}
     }
     Component {
-        id: anyPanel
+        id: anyComponent
 
-        AnyPanel {
-        }
+        AnyComponent {}
     }
 }

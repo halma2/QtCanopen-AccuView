@@ -1,5 +1,5 @@
 class UiAdapter:
-    def __init__(self, controller=None):
+    def __init__(self, controller):
         self.controller = controller
         self._last_group_count = None
 

@@ -1,26 +1,28 @@
 [project]
 name = "Canopen Accu Viewer"
+description = ""
 dependencies = [
     "PySide6>=6.11",
     "pyserial>=3.5",
-    "python-can>=2.4.1",
-    "Canopen>=4.6.1",
+    "python-can>=4.6.1",
+    "canopen>=2.4.1",
 ]
+readme = "README.md"
 requires-python = ">=3.11"
 
 
 [tool.pyside6-project]
 files = [
     "main.py",
-    "canopen_app/ApplicationController.py",
+    "application_controller.py",
     "canopen_app/can_service.py",
     "canopen_app/measurement_processor.py",
     "canopen_app/ui_adapter.py",
     "tools/canopen_client_short.py",
     "includes/Main.qml",
-    "includes/AnyPanel.qml",
-    "includes/GroupPanel.qml",
-    "includes/SettingsPanel.qml",
+    "AnyComponent.qml",
+    "GroupComponent.qml",
+    "SettingsComponent.qml",
     "SidePanelContainer.qml",
     "includes/ButtonBar.qml",
     "includes/StatPanel.qml",

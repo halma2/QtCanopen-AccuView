@@ -4,7 +4,7 @@ from os import environ, path
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 
-from canopen_app.ApplicationController import ApplicationController
+from canopen_app.application_controller import ApplicationController
 
 if sys.platform == "win32":
     environ["QT_SCALE_FACTOR"] = "0.66" # In Windows 10 the scaling factor is 150%

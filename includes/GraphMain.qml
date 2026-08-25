@@ -4,154 +4,128 @@ import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import "QtGraphAutoAxisY.js" as QtGraphAutoAxisY
 
-Pane {
+GridLayout {
     id: graphMainRoot
 
-    property var theme
-    property string selectedDiagramId: "average"
+    property string title: ""
 
-    signal openGroupPanel(int id)
-
+    signal openGroupPanel(int groupId)
     Connections {
         target: controller
 
         function onGraphDataChanged(dataList) {
-            if (selectedDiagramId === "minMax")
-                return
-            if (selectedDiagramId === "top8") {
+            if (title === "Top 8") {
                 graph1.values = dataList[0];
                 graph1.indexes = dataList[1];
                 graph1.marginRight = 40;
-            } else {
+            } else if (title === "Average" || title === "Maximum" || title === "Minimum") {
                 graph1.marginRight = 0;
                 graph1.values = dataList;
             }
         }
     }
 
-    Layout.fillHeight: true
-    Layout.fillWidth: true
-
-    background: Rectangle {
-        border.color: graphMainRoot.theme.borderColor
-        border.width: 1
-        color: graphMainRoot.theme.graphBackgroundColor
-        radius: 5
+    Label {
+        text: graphMainRoot.title
+        Layout.alignment: Qt.AlignCenter
     }
 
-    RowLayout {
-        anchors.fill: parent
+    GraphsView {
+        id: graph1
 
-        Item {
-            id: graphContainer
+        Layout.row: 1
+        Layout.column: 0
+        property var indexes: []
+        property real margin: 0.02
+        property real minWindowSize: 0.5
+        property var values: []
+        Layout.fillHeight: true
+        Layout.fillWidth: true
 
-            Layout.fillHeight: true
-            Layout.fillWidth: true
+        theme: GraphsTheme {
+            theme: GraphsTheme.Theme.BlueSeries
+            colorScheme: GraphsTheme.ColorScheme.Dark
 
-            GraphsView {
-                id: graph1
-
-                property var indexes: []
-                property real margin: 0.02
-                property real minWindowSize: 0.5
-                property var values: []
-
-                anchors.fill: parent
-                marginBottom: 5
-                marginLeft: 25
-                marginRight: 0
-                marginTop: 0
-                orientation: Qt.Horizontal
-                panStyle: GraphsView.PanStyle.None
-                theme: graphMainRoot.theme.graphTheme
-                zoomStyle: GraphsView.ZoomStyle.None
-
-                axisX: BarCategoryAxis {
-                    categories: []
-                }
-                axisY: ValueAxis {
-                    alignment: Qt.AlignRight // if graph.orientation: Qt.Horizontal
-                    max: 0.5
-                    tickInterval: 1
-                }
-
-                onIndexesChanged: {
-                    if (graphMainRoot.selectedDiagramId === "top8")
-                        axisX.categories = indexes;
-                }
-                onValuesChanged: {
-                    dataBarSet.clear();
-                    let displayedIndexes = indexes;
-                    if (graphMainRoot.selectedDiagramId !== "top8") {
-                        displayedIndexes = [];
-                        for (let i = 0; i < values.length; i++)
-                            displayedIndexes.push(i + 1);
-                    }
-                    for (let i = 0; i < values.length; i++) {
-                        dataBarSet.append(Number(values[i]));
-                    }
-                    axisX.categories = displayedIndexes;
-                    let currentMinMax = QtGraphAutoAxisY.get_custom_axisY(values, graph1);
-                    axisY.min = currentMinMax[0];
-                    axisY.max = currentMinMax[1];
-                    axisY.tickInterval = 0.1;
-                    axisY.subTickCount = 10;
-                }
-
-                BarSeries {
-                    BarSet {
-                        id: dataBarSet
-                    }
-                }
-            }
-            MouseArea {
-                anchors.fill: parent
-                hoverEnabled: true
-
-                onClicked: function (mouse) {
-                    if (graphMainRoot.selectedDiagramId === "top8")
-                        return;
-                    let plot = graph1.plotArea;
-                    if (mouse.x < plot.x || mouse.x > plot.x + plot.width || mouse.y < plot.y || mouse.y > plot.y + plot.height)
-                        return;
-                    let count = dataBarSet.count;
-                    if (count === 0)
-                        return;
-                    let idx = Math.floor((mouse.y - plot.y) / plot.height * count);
-                    idx = Math.max(0, Math.min(count - 1, idx));
-
-                    openGroupPanel(idx);
-                }
-            }
+            plotAreaBackgroundVisible: false
+            backgroundVisible: false
+            axisXLabelFont.pixelSize: 28
+            axisYLabelFont.pixelSize: 28
         }
 
-        // separator line
-        Rectangle {
-            Layout.bottomMargin: 40
-            Layout.fillHeight: true
-            Layout.preferredWidth: 1
-            border.color: graphMainRoot.theme.borderColor
+        marginLeft: 30
+        orientation: Qt.Horizontal
+        panStyle: GraphsView.PanStyle.None
+        zoomStyle: GraphsView.ZoomStyle.None
+
+        axisX: BarCategoryAxis {
+            categories: []
+        }
+        axisY: ValueAxis {
+            alignment: Qt.AlignRight // if graph.orientation: Qt.Horizontal
+            max: 0.5
+            tickInterval: 1
         }
 
-        // Graph-labels
-        Item {
-            Layout.fillHeight: true
-            Layout.preferredWidth: 110
+        onIndexesChanged: {
+            if (graphMainRoot.title === "Top 8")
+                axisX.categories = indexes;
+        }
+        onValuesChanged: {
+            dataBarSet.clear();
+            let displayedIndexes = indexes;
+            if (graphMainRoot.title !== "Top 8") {
+                displayedIndexes = [];
+                for (let i = 0; i < values.length; i++)
+                    displayedIndexes.push(i + 1);
+            }
+            for (let i = 0; i < values.length; i++) {
+                dataBarSet.append(Number(values[i]));
+            }
+            axisX.categories = displayedIndexes;
+            let currentMinMax = QtGraphAutoAxisY.get_custom_axisY(values, graph1);
+            axisY.min = currentMinMax[0];
+            axisY.max = currentMinMax[1];
+            axisY.tickInterval = 0.1;
+            axisY.subTickCount = 10;
+        }
 
-            Repeater {
-                model: graph1.values.length
+        BarSeries {
+            id: dataBarSeries
 
-                delegate: Item {
-                    height: graph1.plotArea.height / graph1.values.length
-                    width: parent.width
-                    y: graph1.plotArea.y + index * height
+            selectable: true
+            BarSet {
+                id: dataBarSet
+                selectedColor: color
+            }
+            onClicked: function (index) {
+                if (graphMainRoot.title === "Top 8") // Adott csoportot hívja meg
+                    openGroupPanel(graph1.indexes[index].split("/")[0] - 1)
+                else
+                    openGroupPanel(index)
+                dataBarSet.deselectAllBars();
+            }
+        }
+    }
 
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        font.bold: true
-                        font.pixelSize: graphMainRoot.theme.fontPixelSize
-                        text: graph1.values[index].toFixed(3) + " V"
-                    }
+    Item {
+        Layout.row: 1
+        Layout.column: 1
+        Layout.fillHeight: true
+        Layout.preferredWidth: 120
+
+        Repeater {
+            model: graph1.values
+
+            delegate: Item {
+                height: graph1.plotArea.height / graph1.values.length
+                width: parent.width
+                y: graph1.plotArea.y + index * height
+
+                Label {
+                    anchors.verticalCenter: parent.verticalCenter
+                    font.bold: true
+                    color: "white"
+                    text: Number(modelData).toFixed(3) + " V"
                 }
             }
         }

@@ -1,4 +1,4 @@
-canopen>=2.4.1
-python-can>=4.6.1
-pyserial>=3.5
 PySide6>=6.11.1
+pyserial>=3.5
+python-can>=4.6.1
+canopen>=2.4.1

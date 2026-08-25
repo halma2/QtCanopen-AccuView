@@ -5,18 +5,14 @@ import QtQuick.Layouts
 Pane {
     id: diagramPanelRoot
 
-    property var diagramDefinitions: [ "average", "minimum", "maximum", "top8", "minMax" ]
-    property string selectedDiagramId: diagramDefinitions[diagramSwipeView.currentIndex]
-    property var theme
-
     signal openGroupPanel(int id)
 
-    Layout.bottomMargin: 20
-    Layout.fillHeight: true
-    Layout.fillWidth: true
-    Layout.topMargin: 20
-    clip: true
-    padding: 0
+    background: Rectangle {
+        color: "#60000000"
+        border.color: "white"
+        border.width: 1
+        radius: 8
+    }
 
     SwipeView {
         id: diagramSwipeView
@@ -24,62 +20,32 @@ Pane {
         anchors.fill: parent
         currentIndex: 0
         spacing: 0
+        clip: true
 
-        onCurrentIndexChanged: {
-            controller.set_diagram_type(currentIndex);
+        onCurrentIndexChanged: controller.set_diagram_type(currentIndex)
+
+        GraphMain {
+            title: "Average"
+            onOpenGroupPanel: function (groupId) {diagramPanelRoot.openGroupPanel(groupId)}
         }
 
-        Repeater {
-            id: diagramRepeater
+        GraphMain {
+            title: "Minimum"
+            onOpenGroupPanel: function (groupId) {diagramPanelRoot.openGroupPanel(groupId)}
+        }
 
-            model: diagramDefinitions
+        GraphMain {
+            title: "Maximum"
+            onOpenGroupPanel: function (groupId) {diagramPanelRoot.openGroupPanel(groupId)}
+        }
 
-            delegate: Rectangle {
+        GraphMain {
+            title: "Top 8"
+            onOpenGroupPanel: function (groupId) {diagramPanelRoot.openGroupPanel(groupId)}
+        }
 
-                border.color: diagramSwipeView.visualFocus ?
-                    diagramPanelRoot.theme.palette.highlight : diagramPanelRoot.theme.borderColor
-                border.width: 1
-                radius: 8
-
-                ColumnLayout {
-                    anchors.fill: parent
-
-                    Text {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: implicitHeight
-                        font.bold: true
-                        font.pixelSize: diagramPanelRoot.theme.fontPixelSize
-                        horizontalAlignment: Text.AlignHCenter
-                        text: modelData
-                        verticalAlignment: Text.AlignVCenter
-                    }
-                    GraphMain {
-                        id: graphMain
-
-                        Layout.margins: 5
-                        Layout.topMargin: 0
-                        theme: diagramPanelRoot.theme
-                        selectedDiagramId: diagramPanelRoot.selectedDiagramId
-                        visible: diagramPanelRoot.selectedDiagramId !== "minMax"
-
-                        onOpenGroupPanel: function (groupId) {
-                            diagramPanelRoot.openGroupPanel(groupId);
-                        }
-                    }
-                    GraphMinMax {
-                        id: graphMinMax
-
-                        Layout.margins: 5
-                        Layout.topMargin: 0
-                        theme: diagramPanelRoot.theme
-                        visible: diagramPanelRoot.selectedDiagramId === "minMax"
-
-                        onOpenGroupPanel: function (groupId) {
-                            diagramPanelRoot.openGroupPanel(groupId);
-                        }
-                    }
-                }
-            }
+        GraphMinMax {
+            onOpenGroupPanel: function (groupId) {diagramPanelRoot.openGroupPanel(groupId)}
         }
     }
 }

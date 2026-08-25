@@ -9,12 +9,8 @@ Pane {
     property var statList: [0, 0, 0]
     property int statOffset: 0
     property int decimalPlaces: 3
-    property string header: ""
+    property string title: ""
     property string unit: ""
-    property var theme
-
-    Layout.fillHeight: true
-    Layout.fillWidth: true
 
     Connections {
         target: controller
@@ -28,9 +24,9 @@ Pane {
     }
 
     background: Rectangle {
-        border.color: statPanelRoot.theme.borderColor
+        color: "#60000000"
+        border.color: "white"
         border.width: 1
-        color: statPanelRoot.theme.paneBackgroundColor
         radius: 8
     }
 
@@ -40,7 +36,7 @@ Pane {
         Label {
             id: title
 
-            text: statPanelRoot.header
+            text: statPanelRoot.title
         }
         Repeater {
             model: statPanelRoot.statList
