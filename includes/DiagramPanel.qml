@@ -7,12 +7,7 @@ Pane {
 
     signal openGroupPanel(int id)
 
-    background: Rectangle {
-        color: "#60000000"
-        border.color: "white"
-        border.width: 1
-        radius: 8
-    }
+    background: Background {}
 
     SwipeView {
         id: diagramSwipeView

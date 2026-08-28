@@ -6,7 +6,7 @@ ColumnLayout {
     id: settingsPanelRoot
 
     Label {
-        text: "Szabad portok"
+        text: "Port"
     }
     ComboBox {
         id: portInput

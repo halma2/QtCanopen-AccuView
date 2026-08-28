@@ -5,7 +5,8 @@ import QtQuick.Layouts
 Pane {
     id: buttonBarRoot
 
-    property bool busActive: false
+    property bool busActive: appController ? appController.bus_active : false
+    property bool busBusy: appController ? appController.bus_busy : false
     property bool containerOpened: false
     property var appController
 
@@ -22,19 +23,7 @@ Pane {
         }
     }
 
-    Connections {
-        target: buttonBarRoot.appController
-        function onErrorOccurred() {
-            buttonBarRoot.busActive = false
-        }
-    }
-
-    background: Rectangle {
-        color: "#60000000"
-        border.color: "white"
-        border.width: 1
-        radius: 8
-    }
+    background: Background {}
 
     ColumnLayout {
         id: buttonBarView
@@ -81,16 +70,15 @@ Pane {
                 font.pixelSize: 70
                 Layout.fillWidth: true
                 Layout.preferredHeight: buttonBarView.width
+                enabled: !(modelData.action === "connect" && rootItem.busBusy)
                 highlighted: buttonBarView.activePanelIndex === index && buttonBarView.rootItem.containerOpened
                 text: modelData.icon
 
                 onClicked: {
                     if (modelData.action === "connect") {
                         if (rootItem.busActive) {
-                            rootItem.busActive = false;
                             rootItem.appController.stop_reading();
                         } else {
-                            rootItem.busActive = true;
                             rootItem.appController.start_reading();
                         }
                         return;

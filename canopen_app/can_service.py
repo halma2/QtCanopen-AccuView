@@ -1,7 +1,8 @@
 import struct
+import threading
 import time
 
-from can import CanError, CanOperationError
+from can import CanError
 from canopen import Network, SdoCommunicationError
 
 
@@ -20,8 +21,8 @@ class CanService:
         self.v_count = v_count
         self.t_count = t_count
         self.port: str | None = None
-        self._connected = False
-        self._notifier_error = None
+        self.connected = False
+        self._connection_lock = threading.RLock()
         self.eds_path = eds_path
         self._create_network()
 
@@ -33,31 +34,29 @@ class CanService:
             raise CanServiceError(str(e)) from e
 
     def connect(self):
-        if self._connected:
-            return
-        self._notifier_error = None
-        try:
-            self.network.connect(bustype="slcan", channel=self.port, bitrate=250_000)
-        except (CanError, OSError):
-            self._release_broken_connection()
-            raise
-        self._connected = True
+        with self._connection_lock:
+            if self.connected:
+                return
+            try:
+                self.network.connect(bustype="slcan", channel=self.port, bitrate=250_000)
+            except (CanError, OSError): #TODO?
+                self._release_broken_connection()
+                raise
+            self.connected = True
     
     def read_measurement(self):
-        if self._notifier_error is not None:
-            raise CanOperationError("CAN receiver stopped") from self._notifier_error
-
-        max_attempts = 3
-        for attempt in range(max_attempts):
-            try:
-                return self.read_decode_sdo()
-            except SdoCommunicationError:
-                if attempt == max_attempts - 1:
-                    raise
-                self.disconnect()
-                time.sleep(0.5)
-                self._create_network()
-                self.connect()
+        with self._connection_lock:
+            max_attempts = 2
+            for attempt in range(max_attempts):
+                try:
+                    return self.read_decode_sdo()
+                except SdoCommunicationError:
+                    if attempt == max_attempts - 1:
+                        raise
+                    self.disconnect()
+                    time.sleep(0.5)
+                    self._create_network()
+                    self.connect()
 
     def read_decode_sdo(self):
         """Az eds-ben levő indexeken levő SDO üzeneteket kéri le CAN buszon és a megfelelő mértékegységre alaktíja át"""
@@ -95,22 +94,22 @@ class CanService:
         return len(raw_data) // 2
 
     def disconnect(self):
-        if not self._connected:
-            return
-        try:
+        with self._connection_lock:
+            if not self.connected:
+                return
             try:
-                self.network.sync.stop()
-            except (CanError, OSError, RuntimeError):
-                pass
-        finally:
-            try:
-                self.network.disconnect()
-            except (CanError, OSError, RuntimeError):
-                pass
+                try:
+                    self.network.sync.stop()
+                except (CanError, OSError, RuntimeError):
+                    pass
             finally:
-                self._release_broken_connection()
+                try:
+                    self.network.disconnect()
+                except (CanError, OSError, RuntimeError):
+                    pass
+                finally:
+                    self._release_broken_connection()
 
     def _release_broken_connection(self):
-        self._connected = False
+        self.connected = False
         self.network.bus = None
-        self.network.notifier = None

@@ -14,8 +14,9 @@ ApplicationWindow {
     visible: true
     palette.windowText: "white"
 
+    onClosing: controller.shutdown()
+
     background: Rectangle {
-        id: mainBackground
         gradient: Gradient {
             GradientStop {
                 position: 0.0
@@ -91,9 +92,9 @@ ApplicationWindow {
             Layout.maximumWidth: 230
             Layout.minimumWidth: 230
             Layout.fillHeight: true
-            statOffset: 0
+            statList: controller.statVoltages
             decimalPlaces: 3
-            title: "Feszültség:"
+            title: "Voltage:"
             unit: "V"
         }
         StatPanel {
@@ -104,9 +105,9 @@ ApplicationWindow {
             Layout.maximumWidth: 230
             Layout.minimumWidth: 230
             Layout.fillHeight: true
-            statOffset: 3
+            statList: controller.statTemperatures
             decimalPlaces: 1
-            title: "Hőmérséklet:"
+            title: "Temperature:"
             unit: "°C"
         }
     }

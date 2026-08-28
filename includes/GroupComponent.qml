@@ -66,7 +66,7 @@ ColumnLayout {
                                 Label {
                                     horizontalAlignment: Text.AlignRight
                                     text: "U" + ((index < 9) ? "0" : "") + Number(index + 1) + ":"
-                                    width: contentWidth
+                                    width: 60
                                 }
                                 Label {
                                     text: Number(modelData).toFixed(3) + " V"

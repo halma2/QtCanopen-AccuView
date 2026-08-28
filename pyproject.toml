@@ -32,3 +32,19 @@ files = [
     "includes/Theme.qml",
     "includes/QtGraphAutoAxisY.js",
 ]
+
+[tool.coverage.run]
+omit = [
+    "*shibokensupport*",
+    "*signature_bootstrap*",
+    "*pyscript*",
+]
+disable_warnings = ["couldnt-parse"]
+
+[tool.coverage.report]
+ignore_errors = true
+omit = [
+    "*shibokensupport*",
+    "*signature_bootstrap*",
+    "*pyscript*",
+]

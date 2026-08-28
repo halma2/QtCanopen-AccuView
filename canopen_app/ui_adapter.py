@@ -2,21 +2,18 @@ class UiAdapter:
     def __init__(self, controller):
         self.controller = controller
         self._last_group_count = None
-
-    def _emit(self, controller_signal, *args):
-        if self.controller is not None:
-            getattr(self.controller, controller_signal).emit(*args)
-
+        self.stat_voltages = [0, 0 ,0]
+        self.stat_temperatures = [0, 0, 0]
 
     def publish_snapshot(self, snapshot):
-        self.controller.statDataChanged.emit([
-            snapshot.voltage_statistics.minimum,
-            snapshot.voltage_statistics.average,
-            snapshot.voltage_statistics.maximum,
-            snapshot.temperature_statistics.minimum,
-            snapshot.temperature_statistics.average,
-            snapshot.temperature_statistics.maximum,
-        ])
+        self.stat_voltages = [snapshot.voltage_statistics.minimum,
+                              snapshot.voltage_statistics.average,
+                              snapshot.voltage_statistics.maximum]
+        self.stat_temperatures = [snapshot.temperature_statistics.minimum,
+                                  snapshot.temperature_statistics.average,
+                                  snapshot.temperature_statistics.maximum]
+        self.controller.statVoltDataChanged.emit(self.stat_voltages)
+        self.controller.statTempDataChanged.emit(self.stat_temperatures)
         group_count = self.controller.processor.group_count
         if group_count != self._last_group_count:
             self._last_group_count = group_count
