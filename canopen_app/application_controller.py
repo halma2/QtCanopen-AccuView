@@ -1,4 +1,3 @@
-import sys
 import threading
 from os import path
 
@@ -7,8 +6,7 @@ import serial.tools.list_ports
 from can import CanInitializationError
 from canopen import SdoCommunicationError
 from PySide6.QtCore import Property, QObject, QThread, Signal, Slot
-from PySide6.QtGui import QGuiApplication
-from PySide6.QtQml import QQmlApplicationEngine
+from PySide6.QtQml import QmlElement
 
 from canopen_app.can_service import CanService, CanServiceError
 from canopen_app.connection_test import TestWorker
@@ -16,6 +14,14 @@ from canopen_app.measurement_processor import DiagramType, MeasurementProcessor
 from canopen_app.ui_adapter import UiAdapter
 
 
+
+QML_IMPORT_NAME = "canopen_app"
+QML_IMPORT_MAJOR_VERSION = 1
+QML_IMPORT_MINOR_VERSION = 0
+
+import sys
+
+@QmlElement
 class ApplicationController(QObject):
     portListChanged = Signal("QVariant")
     graphDataChanged = Signal("QVariant")
@@ -30,7 +36,7 @@ class ApplicationController(QObject):
     busActiveChanged = Signal()
     busBusyChanged = Signal()
 
-    def __init__(self, base_dir, eds_name):
+    def __init__(self):
         super().__init__()
         self.time_sec_interval = 1
         self.processor = MeasurementProcessor()
@@ -40,13 +46,34 @@ class ApplicationController(QObject):
         self._available_ports = []
         self.ui = UiAdapter(self)
         self.startup_error = None
-        try:
-            eds_path = str(path.join(base_dir, eds_name))
-            self.can_service = CanService(eds_path)
-        except CanServiceError as error:
-            self.can_service = None
-            self.startup_error = error
-            self.ui.report_error(error)
+        self._base_dir = path.dirname(path.dirname(path.abspath(__file__)))
+        self._eds_name = "DS301_modified.eds"
+
+        # Android version
+        if hasattr(sys, "getandroidapilevel"):
+            import canopen_app.android_serial as android_usb
+            android_usb.init_android_serial()
+            if not (android_usb.usb_host_supported_on_android()):
+                self.can_service = None
+                self.startup_error = "USB host is not supported on this android device."
+                self.ui.report_error(self.startup_error)
+                return
+            try:
+                eds_path = str(path.join(self._base_dir, self._eds_name))
+                self.can_service = CanService(eds_path)
+                self.get_serial_ports = android_usb.android_search_for_usb_devices # f()-overwrite
+            except CanServiceError as error:
+                self.can_service = None
+                self.startup_error = error
+                self.ui.report_error(error)
+        else:
+            try:
+                eds_path = str(path.join(self._base_dir, self._eds_name))
+                self.can_service = CanService(eds_path)
+            except CanServiceError as error:
+                self.can_service = None
+                self.startup_error = error
+                self.ui.report_error(error)
         self.worker = None
         self.read_stop_event = threading.Event()
         self.read_stop_event.set()
@@ -55,15 +82,7 @@ class ApplicationController(QObject):
         self._bus_busy = False
         self.test_thread = None
         self.test_worker = None
-        self.app = QGuiApplication(sys.argv)
-        self.app.aboutToQuit.connect(self.shutdown)
-        self.engine = QQmlApplicationEngine()
-        self.engine.load(path.join(base_dir, "includes", "Main.qml"))
-        self.engine.rootContext().setContextProperty("controller", self)
-        if not self.engine.rootObjects():
-            sys.exit(-1)
         self.search_ports()
-        sys.exit(self.app.exec_())
 
     @Slot()
     def start_reading(self):
@@ -83,11 +102,11 @@ class ApplicationController(QObject):
             self.worker.start()
             self._set_bus_active(True)
         except (
-            CanServiceError,
-            CanInitializationError,
-            can.exceptions.CanError,
-            OSError,
-            TypeError,
+                CanServiceError,
+                CanInitializationError,
+                can.exceptions.CanError,
+                OSError,
+                TypeError,
         ) as e:
             self.read_stop_event.set()
             self.worker = None
@@ -139,14 +158,14 @@ class ApplicationController(QObject):
                 self.ui.publish_snapshot(snapshot)
                 self.read_stop_event.wait(self.time_sec_interval)
         except (
-            SdoCommunicationError,
-            CanServiceError,
-            can.exceptions.CanOperationError,
-            can.exceptions.CanError,
-            AttributeError,
-            OSError,
-            RuntimeError,
-            ValueError,
+                SdoCommunicationError,
+                CanServiceError,
+                can.exceptions.CanOperationError,
+                can.exceptions.CanError,
+                AttributeError,
+                OSError,
+                RuntimeError,
+                ValueError,
         ) as e:
             self.ui.report_error(e)
             self.read_stop_event.set()
@@ -211,15 +230,14 @@ class ApplicationController(QObject):
         self.ui.publish_ports(available_ports)
         if self.can_service is None:
             return
-        if (self.can_service.port and self.can_service.port in available_ports) or len(
-            available_ports
-        ) > 0:
+        if ((self.can_service.port == "" and self.can_service.port in available_ports) or
+            len(available_ports) > 0):
             self.can_service.port = available_ports[0]
         else:
-            self.can_service.port = None
+            self.can_service.port = ""
 
     @Property("QVariant", notify=availablePortsChanged)
-    def availablePorts(self):
+    def available_ports(self):
         return self._available_ports
 
     @Slot(str)
@@ -246,11 +264,11 @@ class ApplicationController(QObject):
         return self._selected_group_id
 
     @Property("QVariant", notify=statVoltDataChanged)
-    def statVoltages(self):
+    def stat_voltages(self):
         return self.ui.stat_voltages
 
     @Property("QVariant", notify=statTempDataChanged)
-    def statTemperatures(self):
+    def stat_temperatures(self):
         return self.ui.stat_temperatures
 
     @Slot()

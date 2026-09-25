@@ -20,7 +20,7 @@ class CanService:
         self.group_count = g_count
         self.v_count = v_count
         self.t_count = t_count
-        self.port: str | None = None
+        self.port = ""
         self.connected = False
         self._connection_lock = threading.RLock()
         self.eds_path = eds_path

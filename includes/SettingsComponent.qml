@@ -15,15 +15,25 @@ ColumnLayout {
         Layout.preferredHeight: 120
         Layout.fillWidth: true
         //indicator: null
-        property var ports: controller ? controller.availablePorts : []
+        property var ports: controller ? controller.available_ports : []
 
         model: ports
+
+        hoverEnabled: true
+        ToolTip.visible: hovered
+        ToolTip.text: currentText
+        ToolTip.delay: 500
 
         delegate: ItemDelegate {
             width: portInput.width
             height: 120
             text: modelData
             highlighted: portInput.highlightedIndex === index
+
+            hoverEnabled: true
+            ToolTip.visible: hovered
+            ToolTip.text: modelData
+            ToolTip.delay: 500
         }
 
         onActivated: controller.set_port(currentText)

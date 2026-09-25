@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls.Basic
 import QtQuick.Dialogs
 
+import canopen_app 1.0
 
 ApplicationWindow {
     id: applicationWindow
@@ -13,6 +14,14 @@ ApplicationWindow {
     visibility: Window.FullScreen
     visible: true
     palette.windowText: "white"
+
+    ApplicationController {
+        id: controller
+
+        Component.onCompleted: {
+            console.log(controller)
+        }
+    }
 
     onClosing: controller.shutdown()
 
@@ -33,7 +42,7 @@ ApplicationWindow {
         anchors.fill: parent
         columns: 4
         rows: 2
-        anchors.margins: 20
+        anchors.margins: 10
         columnSpacing: 10
 
         ButtonBar {
@@ -92,7 +101,7 @@ ApplicationWindow {
             Layout.maximumWidth: 230
             Layout.minimumWidth: 230
             Layout.fillHeight: true
-            statList: controller.statVoltages
+            statList: controller ? controller.stat_voltages : [0,0,0]
             decimalPlaces: 3
             title: "Voltage:"
             unit: "V"
@@ -105,7 +114,7 @@ ApplicationWindow {
             Layout.maximumWidth: 230
             Layout.minimumWidth: 230
             Layout.fillHeight: true
-            statList: controller.statTemperatures
+            statList: controller ? controller.stat_temperatures : [0,0,0]
             decimalPlaces: 1
             title: "Temperature:"
             unit: "°C"

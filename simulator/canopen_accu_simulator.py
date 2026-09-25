@@ -7,7 +7,7 @@ import canopen
 
 can_channel = '/dev/ttyACM0'
 if sys.platform == 'win32':
-    can_channel = 'COM4'
+    can_channel = 'COM3'
 
 nodes = 16
 volt_measures = 12
