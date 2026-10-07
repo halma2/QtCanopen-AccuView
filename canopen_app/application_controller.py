@@ -13,13 +13,16 @@ from canopen_app.connection_test import TestWorker
 from canopen_app.measurement_processor import DiagramType, MeasurementProcessor
 from canopen_app.ui_adapter import UiAdapter
 
+import sys
+
+if hasattr(sys, "getandroidapilevel"):
+    import time
+    import canopen_app.android_serial as android_usb
 
 
 QML_IMPORT_NAME = "canopen_app"
 QML_IMPORT_MAJOR_VERSION = 1
 QML_IMPORT_MINOR_VERSION = 0
-
-import sys
 
 @QmlElement
 class ApplicationController(QObject):
@@ -49,9 +52,8 @@ class ApplicationController(QObject):
         self._base_dir = path.dirname(path.dirname(path.abspath(__file__)))
         self._eds_name = "DS301_modified.eds"
 
-        # Android version
+        # If platform is Android
         if hasattr(sys, "getandroidapilevel"):
-            import canopen_app.android_serial as android_usb
             android_usb.init_android_serial()
             if not (android_usb.usb_host_supported_on_android()):
                 self.can_service = None
@@ -96,6 +98,14 @@ class ApplicationController(QObject):
                 return
             self._set_bus_busy(True)
         try:
+            if hasattr(sys, "getandroidapilevel"):
+                if len(self._available_ports) == 0:
+                    self.ui.report_error("No USB devices available.")
+                    return
+                if not android_usb.android_usb_permission_granted(self.can_service.port):
+                    android_usb.android_usb_request_permission(self.can_service.port)
+                    time.sleep(5)
+
             self.can_service.connect()
             self.read_stop_event.clear()
             self.worker = threading.Thread(target=self.bus_reading, daemon=True)

@@ -18,7 +18,7 @@ clib.usb_write.restype = c_int
 clib.usb_read.argtypes = [POINTER(c_char), c_int, c_int]
 clib.usb_read.restype = c_int
 
-def android_serial_for_url(*args, **kwargs):
+def _android_serial_for_url(*args, **kwargs):
     return AndroidSerial(*args, **kwargs)
 
 def usb_host_supported_on_android() -> bool:
@@ -28,7 +28,7 @@ def usb_host_supported_on_android() -> bool:
 def init_android_serial():
     """Az slcan ezen pyserial port-megnyitás függvénye
     át van irányítva a saját AndroidSerial osztályra (monkey-patch)."""
-    slcan.serial.serial_for_url = android_serial_for_url
+    slcan.serial.serial_for_url = _android_serial_for_url
 
 def android_search_for_usb_devices() -> list[str]:
     """Kilistázza csatlakoztatott USB eszközök nevét (device name)"""
@@ -44,7 +44,7 @@ class AndroidSerial:
     """A pyserial serial class osztály azon mezőit írja felül,
     amelyet az slcan használ.
     A soros eszközök elérését és kommunikációját egy előre lefordított
-    c++ könyvtár függvényeinek hívásával éri el.
+    c++ könyvtár (clib: libpyandroidserial.so) függvényeinek hívásával éri el.
     """
     def __init__(
         self,
