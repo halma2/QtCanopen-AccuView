@@ -54,7 +54,11 @@ class ApplicationController(QObject):
 
         # If platform is Android
         if hasattr(sys, "getandroidapilevel"):
-            android_usb.init_android_serial()
+            from can.interfaces import slcan
+            #Az slcan ezen pyserial port-megnyitás függvénye
+            #át van irányítva a saját AndroidSerial osztályra (monkey-patch).
+            slcan.serial.serial_for_url = android_usb.android_serial_for_url
+
             if not (android_usb.usb_host_supported_on_android()):
                 self.can_service = None
                 self.startup_error = "USB host is not supported on this android device."
@@ -224,8 +228,8 @@ class ApplicationController(QObject):
         self._ensure_bus_state()
         return self._bus_busy
 
-    @Slot()
-    def search_ports(self):
+    @staticmethod
+    def get_serial_ports(self) -> list[str]:
         ports = list(serial.tools.list_ports.comports())
         available_ports = []
         for p in ports:
@@ -235,14 +239,18 @@ class ApplicationController(QObject):
                 available_ports.append(p.device)
             except serial.SerialException:
                 pass
-        self._available_ports = available_ports
+        return available_ports
+
+    @Slot()
+    def search_ports(self):
+        self._available_ports = self.get_serial_ports()
         self.availablePortsChanged.emit()
-        self.ui.publish_ports(available_ports)
+        self.ui.publish_ports(self._available_ports)
         if self.can_service is None:
             return
-        if ((self.can_service.port == "" and self.can_service.port in available_ports) or
-            len(available_ports) > 0):
-            self.can_service.port = available_ports[0]
+        if ((self.can_service.port != "" and self.can_service.port in self._available_ports) or
+                len(self._available_ports) > 0):
+            self.can_service.port = self._available_ports[0]
         else:
             self.can_service.port = ""
 
