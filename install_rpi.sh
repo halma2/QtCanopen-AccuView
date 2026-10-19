@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# This shell script is only for Raspberry PI (model 4b) with touchpad
+# @brief: This shell script is only for Raspberry PI (model 4b) with touchpad (e.g. RPI touch-display2)
 
-# Arguments (optional):
+# @arguments (optional):
 # --venv: the path of the virtual python interpreter, default: ./myvenv
 # --program_dir: the file path of the main python script, default: ./main.py
 # --requirements: the file path of the listed required packages of main.py that pip should install,
