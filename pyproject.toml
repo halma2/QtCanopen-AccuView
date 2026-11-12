@@ -15,7 +15,7 @@ requires-python = ">=3.11"
 [tool.pyside6-project]
 files = [
     "main.py",
-    "application_controller.py",
+    "canopen_app/application_controller.py",
     "canopen_app/__init__.py",
     "canopen_app/can_service.py",
     "canopen_app/measurement_processor.py",
