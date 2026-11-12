@@ -1,11 +1,12 @@
 [project]
 name = "Canopen Accu Viewer"
-description = ""
+description = "Cross-platform GUI app for displaying accumulator cell voltages receiving from CANopen bus"
 dependencies = [
-    "PySide6>=6.11",
+    "PySide6>=6.11.2",
     "pyserial>=3.5",
     "python-can>=4.6.1",
     "canopen>=2.4.1",
+    "pydbus>=0.6.0 ; sys_platform == 'linux'",
 ]
 readme = "README.md"
 requires-python = ">=3.11"
@@ -15,22 +16,24 @@ requires-python = ">=3.11"
 files = [
     "main.py",
     "application_controller.py",
+    "canopen_app/__init__.py",
     "canopen_app/can_service.py",
     "canopen_app/measurement_processor.py",
     "canopen_app/ui_adapter.py",
-    "tools/canopen_client_short.py",
-    "includes/Main.qml",
-    "AnyComponent.qml",
-    "GroupComponent.qml",
-    "SettingsComponent.qml",
-    "SidePanelContainer.qml",
-    "includes/ButtonBar.qml",
-    "includes/StatPanel.qml",
-    "includes/DiagramPanel.qml",
-    "includes/GraphMain.qml",
-    "includes/GraphMinMax.qml",
-    "includes/Theme.qml",
-    "includes/QtGraphAutoAxisY.js",
+    "canopen_app/android_serial.py",
+    "canopen_app/app_controller_android_plugin.py",
+    "canopen_app/bluetooth_class_check.py",
+    "ui_includes/Main.qml",
+    "ui_includes/AnyComponent.qml",
+    "ui_includes/GroupComponent.qml",
+    "ui_includes/SettingsComponent.qml",
+    "ui_includes/SidePanelContainer.qml",
+    "ui_includes/ButtonBar.qml",
+    "ui_includes/StatPanel.qml",
+    "ui_includes/DiagramPanel.qml",
+    "ui_includes/GraphMain.qml",
+    "ui_includes/GraphMinMax.qml",
+    "ui_includes/QtGraphAutoAxisY.js",
 ]
 
 [tool.coverage.run]

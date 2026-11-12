@@ -1,4 +1,6 @@
 import json
+from abc import ABC
+from contextlib import contextmanager
 from ctypes import *
 from io import UnsupportedOperation
 
@@ -11,22 +13,34 @@ clib.usb_request_permission.argtypes = [c_char_p]
 clib.usb_request_permission.restype = c_bool
 clib.usb_open_device.argtypes = [c_char_p]
 clib.usb_open_device.restype = c_bool
-clib.usb_available.restype = c_int
+clib.rx_buffer_available.restype = c_int
 clib.usb_write.argtypes = [c_char_p, c_int, c_int]
 clib.usb_write.restype = c_int
-clib.usb_read.argtypes = [POINTER(c_char), c_int, c_int]
-clib.usb_read.restype = c_int
+clib.rx_buffer_read.argtypes = [POINTER(c_char), c_int, c_int]
+clib.rx_buffer_read.restype = c_int
+clib.bt_get_paired_devices.restype = c_char_p
+clib.bt_get_device_class.argtypes = [POINTER(c_char)]
+clib.bt_get_device_class.restype = c_int
+clib.bt_connect.argtypes = [c_char_p]
+clib.bt_connect.restype = c_bool
+clib.bt_has_connect_permission.restype = c_bool
+clib.bt_write.argtypes = [c_char_p, c_int, c_int]
+clib.bt_write.restype = c_int
 
-def android_serial_for_url(*args, **kwargs):
-    return AndroidSerial(*args, **kwargs)
+def android_serial_for_url(url, *args, **kwargs):
+    if str(url).startswith("bt://"):
+        return AndroidBluetoothSerial(url, *args, **kwargs)
+    return AndroidUsbSerial(*args, **kwargs)
 
-def usb_host_supported_on_android() -> bool:
-    """Ellenőrzi, hogy az android eszköz támogatja-e USB host mechanizmust"""
+def android_usb_host_supported() -> bool:
+    """It checks, whether the android device supports USB host"""
     return clib.usb_host_supported()
 
-def android_search_for_usb_devices() -> list[str]:
-    """Kilistázza csatlakoztatott USB eszközök nevét (device name)"""
-    return json.loads(clib.usb_get_all_device_names().decode("utf-8"))
+def android_search_for_usb_bt_devices() -> list[str]:
+    """List all connected devices (device name)"""
+    usb_devices = json.loads(clib.usb_get_all_device_names().decode("utf-8"))
+    bt_devices = json.loads(clib.bt_get_paired_devices().decode("utf-8"))
+    return usb_devices + bt_devices
 
 def android_usb_permission_granted(name: str) -> bool:
     return clib.usb_has_permission(name.encode("utf-8")) == 1
@@ -34,35 +48,49 @@ def android_usb_permission_granted(name: str) -> bool:
 def android_usb_request_permission(name: str) -> bool:
     return clib.usb_request_permission(name.encode("utf-8")) == 1
 
-class AndroidSerial:
-    """A pyserial serial class osztály azon mezőit írja felül,
-    amelyet az slcan használ.
-    A soros eszközök elérését és kommunikációját egy előre lefordított
-    c++ könyvtár (clib: libpyandroidserial.so) függvényeinek hívásával éri el.
+def android_is_bluetooth_device(port: str) -> bool:
+    return port.startswith("bt://")
+
+def android_bluetooth_permission_granted():
+    return clib.bt_has_connect_permission()
+
+def android_bluetooth_request_permission():
+    clib.bt_request_connect_permission()
+
+def android_get_bt_mac_address(port: str) -> str | None:
+    return port[5:] if android_is_bluetooth_device(port) else None
+
+def android_bluetooth_get_device_class(port: str) -> int:
+    return clib.bt_get_device_class(android_get_bt_mac_address(port).encode('ascii'))
+
+
+class AndroidSerial(ABC):
+    """The pyserial serial class overwrites those properties,
+        which are used by SLCAN.
+        It accesses the serial devices and communication by calling functions
+        of a pre-compiled c++ library.
     """
     def __init__(
         self,
-        channel: str,
-        baudrate=115200,
-        rtscts=False,
-        timeout=0.001,
-    ):
-        self.channel = channel
+        port: str,
+        baudrate = 115200,
+        rtscts = False,
+        timeout = 0.001,
+        write_timeout=1.0,
+        **kwargs,
+        ):
+        self.port = port
         self.baudrate = baudrate
         self.rtscts = rtscts
         self.timeout = timeout
-
         self.write_timeout = None
         self._closed = False
-        self.handle = clib.usb_open_device(channel.encode("utf-8"))
-
-        if not android_usb_permission_granted(channel):
-            raise PermissionError("Android USB permission has not been granted")
+        self.handle = None
 
     @property
     def in_waiting(self):
-        """Lekéri a c++ könyvtárban levő buffer olvasható byte-ok számát."""
-        return clib.usb_available()
+        """It queries the number of readable bytes in the buffer of the c++ library."""
+        return clib.rx_buffer_available()
 
     def read(self, size=1):
         if self._closed or size <= 0:
@@ -72,10 +100,71 @@ class AndroidSerial:
             if self.timeout is None
             else max(1, int(self.timeout * 1000)))
         buffer = create_string_buffer(size)
-        result = clib.usb_read(buffer, size, timeout_ms)
+        result = clib.rx_buffer_read(buffer, size, timeout_ms)
         if result < 0:
-            raise OSError(f"USB read failed {result}")
+            raise OSError(f"Serial read failed {result}")
         return buffer.raw[:result]
+
+    def write(self, data):
+        pass
+
+    def flush(self):
+        pass # synchronised bulk-transfer
+
+    @staticmethod
+    def reset_input_buffer():
+        clib.clear_rx_buffer()
+
+    @staticmethod
+    def reset_output_buffer():
+        # The OutputStream does not provide general clear.
+        # It should not be assumed that the already sent data can be deleted.
+        pass
+
+    def read_until(self, expected: bytes | str = b"\n", size=None):
+        if isinstance(expected, str):
+            expected = expected.encode()
+        result = bytearray()
+
+        while size is None or len(result) < size:
+            part = self.read(1)
+            if not part:
+                break
+            result.extend(part)
+            if result.endswith(expected):
+                break
+        return bytes(result)
+
+    def readline(self, size=None):
+        return self.read_until(b"\n", size=size)
+
+    def close(self):
+        pass
+
+    def fileno(self):
+         raise UnsupportedOperation("The device has no POSIX file descriptor")
+
+
+class AndroidUsbSerial(AndroidSerial):
+    def __init__(
+        self,
+        port: str,
+        baudrate=115200,
+        rtscts=False,
+        timeout=0.001,
+        write_timeout=1.0,
+        **kwargs,
+    ):
+        super().__init__(port=port, baudrate=baudrate, rtscts=rtscts,
+                         timeout=timeout, write_timeout=write_timeout, **kwargs)
+
+        if not clib.usb_open_device(port.encode("utf-8")):
+            raise OSError("USB device cannot be opened")
+
+        if not android_usb_permission_granted(port):
+            raise PermissionError("Android USB permission has not been granted")
+
+        self.is_open = True
 
     def write(self, data):
         if self._closed:
@@ -89,16 +178,97 @@ class AndroidSerial:
         )
         return clib.usb_write(data, len(data), timeout_ms)
 
-    def flush(self):
-        pass # synchronised bulk-transfer
-
-    def reset_input_buffer(self):
-        clib.usb_clear_rx_buffer()
-
     def close(self):
         if not self._closed:
             self._closed = True
             clib.usb_close()
 
-    def fileno(self):
-         raise UnsupportedOperation("Android USB device has no POSIX file descriptor")
+
+class AndroidBluetoothSerial(AndroidSerial):
+    def __init__(
+        self,
+        port,
+        baudrate=115200,
+        rtscts=False,
+        timeout=0.1,
+        write_timeout=1.0,
+        **kwargs,
+    ):
+        super().__init__(port=port, baudrate=baudrate, rtscts=rtscts,
+                         timeout=timeout, write_timeout=write_timeout, **kwargs)
+
+        if not clib.bt_has_connect_permission():
+            raise PermissionError("Android Bluetooth permission has not been granted")
+
+        mac = android_get_bt_mac_address(self.port)
+        if not mac:
+            raise ValueError(f"Invalid Bluetooth port: {self.port}")
+
+        if not clib.bt_connect(mac.encode("ascii")):
+            raise OSError(f"Bluetooth SPP connection error: {mac}")
+
+        if not clib.bt_has_connect_permission():
+            raise PermissionError("Android Bluetooth permission has not been granted")
+        self.is_open = True
+
+    def write(self, data):
+        if not self.is_open:
+            raise OSError("Bluetooth-connection is not open.")
+
+        data = bytes(data)
+        if not data:
+            return 0
+
+        timeout_ms = (
+            -1 if self.write_timeout is None
+            else max(0, int(self.write_timeout * 1000))
+        )
+        # The C++ function gets explicit length parameter,
+        # so the bytestring is not handled as null-terminated string.
+        count = clib.bt_write(data, len(data), timeout_ms)
+
+        if count < 0:
+            raise OSError("Bluetooth write error.")
+        return count
+
+    def close(self):
+        if self.is_open:
+            clib.bt_close()
+            self.is_open = False
+
+
+def open_serial(
+    port,
+    baudrate=115200,
+    rtscts=False,
+    timeout=1.0,
+    write_timeout=1.0,
+    **kwargs,
+) -> AndroidSerial:
+    """Used for opening UART communication."""
+    port = str(port)
+    if port.startswith("bt:"):
+        return AndroidBluetoothSerial(
+            port=port,
+            baudrate=baudrate,
+            rtscts=rtscts,
+            timeout=timeout,
+            write_timeout=write_timeout,
+            **kwargs,
+        )
+    return AndroidUsbSerial(
+        port=port,
+        baudrate=baudrate,
+        rtscts=rtscts,
+        timeout=timeout,
+        write_timeout=write_timeout,
+        **kwargs,
+    )
+
+@contextmanager
+def android_serial(port): # use: 'with android_serial(args) as serial:'
+    android_ser = open_serial(port)
+    try:
+        yield android_ser
+    finally:
+        android_ser.close()

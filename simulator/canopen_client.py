@@ -8,11 +8,11 @@ import canopen
 
 port = '/dev/ttyACM0'
 if sys.platform == 'win32':
-    port = 'COM3'
+    port = 'COM4'
 
 network = canopen.Network()
 network.connect(bustype='slcan', channel=port ,bitrate=250_000)
-node = network.add_node(1, "../DS301_modified.eds")
+node = network.add_node(1, '../DS301_modified.eds')
 
 while True:
     data_raw = node.sdo[0x2001].raw

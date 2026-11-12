@@ -1,24 +1,20 @@
 import threading
 from os import path
+import sys
 
 import can.exceptions
 import serial.tools.list_ports
-from can import CanInitializationError
 from canopen import SdoCommunicationError
-from PySide6.QtCore import Property, QObject, QThread, Signal, Slot
+from PySide6.QtCore import Property, QObject, Signal, Slot
 from PySide6.QtQml import QmlElement
 
 from canopen_app.can_service import CanService, CanServiceError
-from canopen_app.connection_test import TestWorker
 from canopen_app.measurement_processor import DiagramType, MeasurementProcessor
 from canopen_app.ui_adapter import UiAdapter
 
-import sys
 
-if hasattr(sys, "getandroidapilevel"):
-    import time
-    import canopen_app.android_serial as android_usb
-
+def is_android_platform() -> bool:
+    return hasattr(sys, "getandroidapilevel")
 
 QML_IMPORT_NAME = "canopen_app"
 QML_IMPORT_MAJOR_VERSION = 1
@@ -26,16 +22,15 @@ QML_IMPORT_MINOR_VERSION = 0
 
 @QmlElement
 class ApplicationController(QObject):
-    portListChanged = Signal("QVariant")
     graphDataChanged = Signal("QVariant")
     groupDataChanged = Signal("QVariant", "QVariant")
     statVoltDataChanged = Signal("QVariant")
     statTempDataChanged = Signal("QVariant")
-    testFinished = Signal(bool)
     errorOccurred = Signal(str)
     selectedGroupIdChanged = Signal(int)
     groupCountChanged = Signal(int)
     availablePortsChanged = Signal()
+    portChanged = Signal(str)
     busActiveChanged = Signal()
     busBusyChanged = Signal()
 
@@ -44,7 +39,6 @@ class ApplicationController(QObject):
         self.time_sec_interval = 1
         self.processor = MeasurementProcessor()
         self.diagram_type: DiagramType = DiagramType.AVERAGE
-        self.requested_group_id = None
         self._selected_group_id = 0
         self._available_ports = []
         self.ui = UiAdapter(self)
@@ -52,76 +46,44 @@ class ApplicationController(QObject):
         self._base_dir = path.dirname(path.dirname(path.abspath(__file__)))
         self._eds_name = "DS301_modified.eds"
 
-        # If platform is Android
-        if hasattr(sys, "getandroidapilevel"):
-            from can.interfaces import slcan
-            #Az slcan ezen pyserial port-megnyitás függvénye
-            #át van irányítva a saját AndroidSerial osztályra (monkey-patch).
-            slcan.serial.serial_for_url = android_usb.android_serial_for_url
-
-            if not (android_usb.usb_host_supported_on_android()):
-                self.can_service = None
-                self.startup_error = "USB host is not supported on this android device."
-                self.ui.report_error(self.startup_error)
-                return
-            try:
-                eds_path = str(path.join(self._base_dir, self._eds_name))
-                self.can_service = CanService(eds_path)
-                self.get_serial_ports = android_usb.android_search_for_usb_devices # f()-overwrite
-            except CanServiceError as error:
-                self.can_service = None
-                self.startup_error = error
-                self.ui.report_error(error)
-        else:
-            try:
-                eds_path = str(path.join(self._base_dir, self._eds_name))
-                self.can_service = CanService(eds_path)
-            except CanServiceError as error:
-                self.can_service = None
-                self.startup_error = error
-                self.ui.report_error(error)
+        if is_android_platform():
+            import app_controller_android_plugin as android
+            android.init_android_serial(self)
+        try:
+            eds_path = path.join(str(self._base_dir), self._eds_name)
+            self.can_service = CanService(eds_path)
+        except CanServiceError as error:
+            self.can_service = None
+            self.startup_error = error
+            self.ui.report_error(error)
         self.worker = None
+        self.worker_port_scanner = None
         self.read_stop_event = threading.Event()
         self.read_stop_event.set()
         self._bus_state_lock = threading.RLock()
         self._bus_active = False
         self._bus_busy = False
-        self.test_thread = None
-        self.test_worker = None
         self.search_ports()
 
     @Slot()
     def start_reading(self):
-        self._ensure_bus_state()
         if self.can_service is None:
             if self.startup_error is not None:
                 self.ui.report_error(self.startup_error)
             return
         with self._bus_state_lock:
-            if self._bus_busy or self._is_can_connected():
+            if self._bus_busy or self.can_service.connected:
                 return
             self._set_bus_busy(True)
+        if is_android_platform():
+            import app_controller_android_plugin as android
+            android.start_reading_preps(self)
         try:
-            if hasattr(sys, "getandroidapilevel"):
-                if len(self._available_ports) == 0:
-                    self.ui.report_error("No USB devices available.")
-                    return
-                if not android_usb.android_usb_permission_granted(self.can_service.port):
-                    android_usb.android_usb_request_permission(self.can_service.port)
-                    time.sleep(5)
-
-            self.can_service.connect()
             self.read_stop_event.clear()
-            self.worker = threading.Thread(target=self.bus_reading, daemon=True)
+            self.worker = threading.Thread(target=self._worker_start_bus_reading, daemon=True)
             self.worker.start()
             self._set_bus_active(True)
-        except (
-                CanServiceError,
-                CanInitializationError,
-                can.exceptions.CanError,
-                OSError,
-                TypeError,
-        ) as e:
+        except RuntimeError as e:
             self.read_stop_event.set()
             self.worker = None
             self._set_bus_active(False)
@@ -130,36 +92,17 @@ class ApplicationController(QObject):
         finally:
             self._set_bus_busy(False)
 
-    @Slot()
-    def stop_reading(self):
-        self._ensure_bus_state()
-        with self._bus_state_lock:
-            if self._bus_busy:
-                return
-            self._set_bus_busy(True)
-        self.read_stop_event.set()
-        worker = self.worker
-        if worker is None or not worker.is_alive():
-            self._finish_stop_reading()
-            return
-        threading.Thread(target=self._finish_stop_reading, daemon=True).start()
-
-    def _finish_stop_reading(self):
-        worker = self.worker
-        if worker is not None and worker is not threading.current_thread():
-            worker.join(1.0)
-        with self._bus_state_lock:
-            if worker is not None and worker.is_alive():
-                self._set_bus_busy(False)
-                return
-            if self.worker is worker:
-                self.worker = None
-            if self.can_service is not None:
-                self.can_service.disconnect()
+    def _worker_start_bus_reading(self):
+        try:
+            self.can_service.connect()
+        except (can.exceptions.CanError, OSError) as e:
+            self.ui.report_error(e)
             self._set_bus_active(False)
             self._set_bus_busy(False)
+            return
+        self._worker_bus_reading()
 
-    def bus_reading(self):
+    def _worker_bus_reading(self):
         try:
             while not self.read_stop_event.is_set():
                 voltages, temperatures = self.can_service.read_measurement()
@@ -167,7 +110,7 @@ class ApplicationController(QObject):
                     voltages,
                     temperatures,
                     self.diagram_type,
-                    self.requested_group_id,
+                    self._selected_group_id,
                 )
                 self.ui.publish_snapshot(snapshot)
                 self.read_stop_event.wait(self.time_sec_interval)
@@ -187,81 +130,115 @@ class ApplicationController(QObject):
             self._set_bus_active(False)
             self._set_bus_busy(False)
 
-    def _ensure_bus_state(self):
-        if not hasattr(self, "_bus_state_lock"):
-            self._bus_state_lock = threading.RLock()
-        if not hasattr(self, "_bus_active"):
-            self._bus_active = False
-        if not hasattr(self, "_bus_busy"):
-            self._bus_busy = False
+    @Slot()
+    def stop_reading(self):
+        with self._bus_state_lock:
+            if self._bus_busy:
+                return
+            self._set_bus_busy(True)
+        self.read_stop_event.set()
+        worker = self.worker
+        if worker is None or not worker.is_alive():
+            self._finish_stop_reading()
+            return
+        threading.Thread(target=self._finish_stop_reading, daemon=True).start()
 
-    def _is_can_connected(self):
-        return getattr(self.can_service, "connected", False) is True
+    def _finish_stop_reading(self):
+        worker = self.worker
+        if worker and worker is not threading.current_thread():
+            worker.join(1.0)
+        with self._bus_state_lock:
+            if worker and worker.is_alive():
+                self._set_bus_busy(False)
+                return
+            if self.worker is worker:
+                self.worker = None
+            if self.can_service is not None:
+                self.can_service.disconnect()
+            self._set_bus_active(False)
+            self._set_bus_busy(False)
 
-    def _set_bus_active(self, active):
-        self._ensure_bus_state()
+    def _set_bus_active(self, active: bool):
         if self._bus_active == active:
             return
         self._bus_active = active
-        self._emit_signal(self.busActiveChanged)
+        self.busActiveChanged.emit()
 
-    def _set_bus_busy(self, busy):
-        self._ensure_bus_state()
+    def _set_bus_busy(self, busy: bool):
         if self._bus_busy == busy:
             return
         self._bus_busy = busy
-        self._emit_signal(self.busBusyChanged)
-
-    def _emit_signal(self, signal):
-        try:
-            signal.emit()
-        except RuntimeError:
-            pass
+        self.busBusyChanged.emit()
 
     @Property(bool, notify=busActiveChanged)
     def bus_active(self):
-        self._ensure_bus_state()
         return self._bus_active
 
     @Property(bool, notify=busBusyChanged)
     def bus_busy(self):
-        self._ensure_bus_state()
         return self._bus_busy
 
     @staticmethod
+    def test_serial(port: str) -> bool:
+        try:
+            with serial.Serial(port):
+                return True
+        except (serial.SerialException, OSError):
+            return False
+
     def get_serial_ports(self) -> list[str]:
+        import canopen_app.bluetooth_class_check as bt_check
+
         ports = list(serial.tools.list_ports.comports())
         available_ports = []
         for p in ports:
-            try:
-                ser = serial.Serial(p.device, timeout=0)
-                ser.close()
+            if p.device == self.can_service.port and self._bus_active:
                 available_ports.append(p.device)
-            except serial.SerialException:
-                pass
+                continue
+            if bt_check.is_bluetooth_device(p):
+                try:
+                    if bt_check.check_bluetooth_class(p) == 0x1F00:
+                        available_ports.append(p.device)
+                        continue
+                except RuntimeError: # input bt comport (no use) if MAC=0 (duplicated)
+                    continue
+            if ApplicationController.test_serial(p.device):
+                available_ports.append(p.device)
         return available_ports
+
+    def _worker_search_ports(self):
+        self._available_ports = self.get_serial_ports()
+        self.worker_port_scanner = None
+        if self.can_service.port in self._available_ports:
+            self.availablePortsChanged.emit()
+            return
+        self.can_service.port = self._available_ports[0] if len(self._available_ports) > 0 else ""
+        self.availablePortsChanged.emit()
+        self.portChanged.emit(self.can_service.port)
 
     @Slot()
     def search_ports(self):
-        self._available_ports = self.get_serial_ports()
-        self.availablePortsChanged.emit()
-        self.ui.publish_ports(self._available_ports)
-        if self.can_service is None:
+        if not self.can_service or self.worker_port_scanner:
             return
-        if ((self.can_service.port != "" and self.can_service.port in self._available_ports) or
-                len(self._available_ports) > 0):
-            self.can_service.port = self._available_ports[0]
-        else:
-            self.can_service.port = ""
+        try:
+            self.worker_port_scanner = threading.Thread(target=self._worker_search_ports, daemon=True)
+            self.worker_port_scanner.start()
+        except RuntimeError as error:
+            self.worker_port_scanner = None
+            self.ui.report_error(error)
 
     @Property("QVariant", notify=availablePortsChanged)
-    def available_ports(self):
+    def available_ports(self) -> list:
         return self._available_ports
 
     @Slot(str)
     def set_port(self, new_port):
         if self.can_service is not None:
             self.can_service.port = new_port
+
+    @Property(str, notify=portChanged)
+    def current_port(self):
+        return self.can_service.port if self.can_service else ""
 
     @Slot(int)
     def set_diagram_type(self, type_id):
@@ -272,7 +249,6 @@ class ApplicationController(QObject):
 
     @Slot(int)
     def get_cell_group(self, group_id):
-        self.requested_group_id = group_id
         if self._selected_group_id != group_id:
             self._selected_group_id = group_id
             self.selectedGroupIdChanged.emit(group_id)
@@ -288,75 +264,3 @@ class ApplicationController(QObject):
     @Property("QVariant", notify=statTempDataChanged)
     def stat_temperatures(self):
         return self.ui.stat_temperatures
-
-    @Slot()
-    def start_test(self):
-        if not self.read_stop_event.is_set():
-            self.ui.finish_test(True)
-            return
-        if self.can_service is None:
-            self.ui.report_error(self.startup_error)
-            return
-        if not self.can_service.port:
-            self.ui.report_error("CAN-port is not selected!")
-            self.ui.finish_test(False)
-            return
-        if self.test_thread is not None:
-            return
-
-        self.test_thread = QThread()
-        self.test_worker = TestWorker(self.can_service.port, self.can_service.eds_path)
-        self.test_worker.moveToThread(self.test_thread)
-
-        self.test_thread.started.connect(self.test_worker.run)
-        self.test_worker.finished.connect(self.ui.finish_test)
-        self.test_worker.finished.connect(self.test_thread.quit)
-        self.test_worker.finished.connect(self.test_worker.deleteLater)
-        self.test_thread.finished.connect(self.test_thread.deleteLater)
-        self.test_thread.finished.connect(self._test_finished)
-        self.test_thread.destroyed.connect(self._test_thread_destroyed)
-        self.test_thread.start()
-
-    @Slot()
-    def _test_finished(self):
-        self.test_thread = None
-        self.test_worker = None
-
-    @Slot()
-    def _test_thread_destroyed(self):
-        self.test_thread = None
-
-    @Slot()
-    def shutdown(self):
-        self._ensure_bus_state()
-        self.read_stop_event.set()
-        self._stop_reading_for_shutdown()
-        self.stop_test()
-
-    def _stop_reading_for_shutdown(self):
-        worker = self.worker
-        if worker is not None and worker is not threading.current_thread():
-            worker.join(1)
-        if worker is not None and worker.is_alive():
-            self._set_bus_active(False)
-            self._set_bus_busy(False)
-            return
-        self.worker = None
-        if self.can_service is not None:
-            self.can_service.disconnect()
-        self._set_bus_active(False)
-        self._set_bus_busy(False)
-
-    @Slot()
-    def stop_test(self):
-        worker = self.test_worker
-        thread = self.test_thread
-        if worker is not None:
-            worker.stop_process()
-        if thread is None:
-            self.test_worker = None
-            return
-        if thread.isRunning():
-            thread.quit()
-            if not thread.wait(500):
-                return

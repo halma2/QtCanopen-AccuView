@@ -28,9 +28,3 @@ class UiAdapter:
     def report_error(self, error):
         print(error)
         self.controller.errorOccurred.emit(str(error))
-
-    def publish_ports(self, ports):
-        self.controller.portListChanged.emit(ports)
-
-    def finish_test(self, result):
-        self.controller.testFinished.emit(result)

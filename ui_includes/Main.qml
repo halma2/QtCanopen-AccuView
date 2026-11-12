@@ -17,13 +17,7 @@ ApplicationWindow {
 
     ApplicationController {
         id: controller
-
-        Component.onCompleted: {
-            console.log(controller)
-        }
     }
-
-    onClosing: controller.shutdown()
 
     background: Rectangle {
         gradient: Gradient {
@@ -49,7 +43,7 @@ ApplicationWindow {
             id: buttonBar
 
             Layout.fillHeight: true
-            Layout.preferredWidth: 140
+            Layout.preferredWidth: 150
             Layout.column: 0
             Layout.row: 0
             Layout.rowSpan: 2

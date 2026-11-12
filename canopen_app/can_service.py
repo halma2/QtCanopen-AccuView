@@ -5,7 +5,6 @@ import time
 from can import CanError
 from canopen import Network, SdoCommunicationError
 
-
 class CanServiceError(RuntimeError):
     """A CAN-szolgáltatás inicializálási vagy kapcsolódási hibája."""
 
@@ -38,8 +37,8 @@ class CanService:
             if self.connected:
                 return
             try:
-                self.network.connect(bustype="slcan", channel=self.port, bitrate=250_000)
-            except (CanError, OSError): #TODO?
+                self.network.connect(bustype="slcan", channel=self.port, bitrate=250_000, sleep_after_open=0)
+            except (CanError, OSError):
                 self._release_broken_connection()
                 raise
             self.connected = True

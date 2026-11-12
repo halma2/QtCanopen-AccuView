@@ -81,11 +81,11 @@ Pane {
                         } else {
                             rootItem.appController.start_reading();
                         }
-                        return;
+                        return
                     }
                     if (modelData.action === "exit") {
                         Qt.quit();
-                        return;
+                        return
                     }
                     // Close sidePanelContainer
                     if (rootItem.containerOpened && buttonBarView.activePanelIndex === index) {
