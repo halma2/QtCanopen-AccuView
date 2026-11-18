@@ -8,7 +8,7 @@ def init_android_serial(ctrl: ApplicationController):
     """ Rewrites the port-opening serial class of the original slcan to AndroidSerial (monkey-patch)
         Also the function for searching COM ports is rewritten in Android."""
     slcan.serial.serial_for_url = android_serial.android_serial_for_url
-    ctrl.get_serial_ports = search_and_filter_android_ports()
+    ctrl.get_serial_ports = search_and_filter_android_ports
 
     if not (android_serial.android_usb_host_supported()):
         ctrl.ui.report_error("USB host is not supported on this android device.")

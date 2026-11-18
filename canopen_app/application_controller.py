@@ -47,7 +47,7 @@ class ApplicationController(QObject):
         self._eds_name = "DS301_modified.eds"
 
         if is_android_platform():
-            import app_controller_android_plugin as android
+            import canopen_app.app_controller_android_plugin as android
             android.init_android_serial(self)
         try:
             eds_path = path.join(str(self._base_dir), self._eds_name)
@@ -56,14 +56,16 @@ class ApplicationController(QObject):
             self.can_service = None
             self.startup_error = error
             self.ui.report_error(error)
-        self.worker = None
-        self.worker_port_scanner = None
-        self.read_stop_event = threading.Event()
-        self.read_stop_event.set()
-        self._bus_state_lock = threading.RLock()
-        self._bus_active = False
-        self._bus_busy = False
-        self.search_ports()
+        finally: #todo delete is not None
+            self.worker = None# todo ha beragad a folyamat terminate ha join(1) után is_alive()
+            #todo bt check
+            self.worker_port_scanner = None
+            self.read_stop_event = threading.Event()
+            self.read_stop_event.set()
+            self._bus_state_lock = threading.RLock()
+            self._bus_active = False
+            self._bus_busy = False
+            self.search_ports()
 
     @Slot()
     def start_reading(self):
@@ -76,7 +78,7 @@ class ApplicationController(QObject):
                 return
             self._set_bus_busy(True)
         if is_android_platform():
-            import app_controller_android_plugin as android
+            import canopen_app.app_controller_android_plugin as android
             android.start_reading_preps(self)
         try:
             self.read_stop_event.clear()
@@ -95,7 +97,7 @@ class ApplicationController(QObject):
     def _worker_start_bus_reading(self):
         try:
             self.can_service.connect()
-        except (can.exceptions.CanError, OSError) as e:
+        except (can.exceptions.CanError, OSError, ValueError) as e:
             self.ui.report_error(e)
             self._set_bus_active(False)
             self._set_bus_busy(False)
@@ -192,6 +194,8 @@ class ApplicationController(QObject):
         ports = list(serial.tools.list_ports.comports())
         available_ports = []
         for p in ports:
+            if p.name == "ttyS0": # Raspberry Pi
+                continue
             if p.device == self.can_service.port and self._bus_active:
                 available_ports.append(p.device)
                 continue
@@ -200,7 +204,7 @@ class ApplicationController(QObject):
                     if bt_check.check_bluetooth_class(p) == 0x1F00:
                         available_ports.append(p.device)
                         continue
-                except RuntimeError: # input bt comport (no use) if MAC=0 (duplicated)
+                except (RuntimeError, FileNotFoundError): # input bt comport (no use) if MAC=0 (duplicated)
                     continue
             if ApplicationController.test_serial(p.device):
                 available_ports.append(p.device)
@@ -233,7 +237,7 @@ class ApplicationController(QObject):
 
     @Slot(str)
     def set_port(self, new_port):
-        if self.can_service is not None:
+        if self.can_service:
             self.can_service.port = new_port
 
     @Property(str, notify=portChanged)

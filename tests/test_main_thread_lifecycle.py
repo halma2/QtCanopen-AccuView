@@ -25,7 +25,7 @@ class ApplicationControllerThreadLifecycleTest(unittest.TestCase):
         controller.read_stop_event = threading.Event()
         controller.read_stop_event.set()
         controller.worker = None
-        controller.bus_reading = lambda: None
+        controller._worker_bus_reading = lambda: None
 
         controller.start_reading()
         controller.worker.join()  # ty:ignore[unresolved-attribute]
@@ -44,7 +44,7 @@ class ApplicationControllerThreadLifecycleTest(unittest.TestCase):
         controller.read_stop_event.set()
         controller.worker = None
         controller.ui = Mock()
-        controller.bus_reading = lambda: None
+        controller._worker_bus_reading = lambda: None
 
         controller.start_reading()
 
@@ -66,7 +66,7 @@ class ApplicationControllerThreadLifecycleTest(unittest.TestCase):
         controller.time_sec_interval = 0
         controller.read_stop_event = threading.Event()
         controller.read_stop_event.clear()
-        controller.worker = threading.Thread(target=controller.bus_reading)
+        controller.worker = threading.Thread(target=controller._worker_bus_reading)
         controller.ui = Mock()
 
         controller.worker.start()
@@ -138,7 +138,7 @@ class ApplicationControllerThreadLifecycleTest(unittest.TestCase):
         controller.read_stop_event.clear()
         controller.ui = Mock()
 
-        controller.bus_reading()
+        controller._worker_bus_reading()
 
         controller.ui.report_error.assert_called_once_with(processing_error)
         self.assertTrue(controller.read_stop_event.is_set())

@@ -14,6 +14,7 @@ ApplicationWindow {
     visibility: Window.FullScreen
     visible: true
     palette.windowText: "white"
+    palette.window: Qt.platform.os === "linux" ? "grey" : ""
 
     ApplicationController {
         id: controller

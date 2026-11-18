@@ -30,7 +30,7 @@ clib.bt_write.restype = c_int
 def android_serial_for_url(url, *args, **kwargs):
     if str(url).startswith("bt://"):
         return AndroidBluetoothSerial(url, *args, **kwargs)
-    return AndroidUsbSerial(*args, **kwargs)
+    return AndroidUsbSerial(url, *args, **kwargs)
 
 def android_usb_host_supported() -> bool:
     """It checks, whether the android device supports USB host"""
@@ -84,7 +84,7 @@ class AndroidSerial(ABC):
         self.rtscts = rtscts
         self.timeout = timeout
         self.write_timeout = None
-        self._closed = False
+        self._is_open = False
         self.handle = None
 
     @property
@@ -93,7 +93,7 @@ class AndroidSerial(ABC):
         return clib.rx_buffer_available()
 
     def read(self, size=1):
-        if self._closed or size <= 0:
+        if not self._is_open or size <= 0:
             return b""
         timeout_ms = (
             -1
@@ -164,10 +164,10 @@ class AndroidUsbSerial(AndroidSerial):
         if not android_usb_permission_granted(port):
             raise PermissionError("Android USB permission has not been granted")
 
-        self.is_open = True
+        self._is_open = True
 
     def write(self, data):
-        if self._closed:
+        if not self._is_open:
             raise OSError("Android USB device is closed")
         if not isinstance(data, (bytes, bytearray)):
             raise TypeError("write() expects bytes or bytearray")
@@ -179,9 +179,9 @@ class AndroidUsbSerial(AndroidSerial):
         return clib.usb_write(data, len(data), timeout_ms)
 
     def close(self):
-        if not self._closed:
-            self._closed = True
+        if self._is_open:
             clib.usb_close()
+            self._is_open = False
 
 
 class AndroidBluetoothSerial(AndroidSerial):
@@ -209,10 +209,10 @@ class AndroidBluetoothSerial(AndroidSerial):
 
         if not clib.bt_has_connect_permission():
             raise PermissionError("Android Bluetooth permission has not been granted")
-        self.is_open = True
+        self._is_open = True
 
     def write(self, data):
-        if not self.is_open:
+        if not self._is_open:
             raise OSError("Bluetooth-connection is not open.")
 
         data = bytes(data)
@@ -232,9 +232,9 @@ class AndroidBluetoothSerial(AndroidSerial):
         return count
 
     def close(self):
-        if self.is_open:
+        if self._is_open:
             clib.bt_close()
-            self.is_open = False
+            self._is_open = False
 
 
 def open_serial(

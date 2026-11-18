@@ -38,7 +38,7 @@ class CanService:
                 return
             try:
                 self.network.connect(bustype="slcan", channel=self.port, bitrate=250_000, sleep_after_open=0)
-            except (CanError, OSError):
+            except (CanError, OSError, ValueError):
                 self._release_broken_connection()
                 raise
             self.connected = True
