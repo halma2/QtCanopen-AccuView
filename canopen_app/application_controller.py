@@ -154,7 +154,7 @@ class ApplicationController(QObject):
                 return
             if self.worker is worker:
                 self.worker = None
-            if self.can_service is not None:
+            if self.can_service:
                 self.can_service.disconnect()
             self._set_bus_active(False)
             self._set_bus_busy(False)

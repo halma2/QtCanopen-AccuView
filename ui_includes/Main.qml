@@ -119,7 +119,7 @@ ApplicationWindow {
         id: errMsgBox
 
         buttons: MessageDialog.Ok
-        title: "Hiba"
+        title: "Error!"
 
         Connections {
             target: controller
