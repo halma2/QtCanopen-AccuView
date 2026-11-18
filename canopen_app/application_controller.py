@@ -56,9 +56,8 @@ class ApplicationController(QObject):
             self.can_service = None
             self.startup_error = error
             self.ui.report_error(error)
-        finally: #todo delete is not None
-            self.worker = None# todo ha beragad a folyamat terminate ha join(1) után is_alive()
-            #todo bt check
+        finally:
+            self.worker = None
             self.worker_port_scanner = None
             self.read_stop_event = threading.Event()
             self.read_stop_event.set()
