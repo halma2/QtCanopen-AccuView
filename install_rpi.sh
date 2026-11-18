@@ -1,15 +1,21 @@
 #!/bin/bash
 
-# This shell script is only for Raspberry PI (model 4b) with touchpad
 
-# Arguments (optional):
-# --venv: the path of the virtual python interpreter, default: ./myvenv
-# --program_dir: the file path of the main python script, default: ./main.py
-# --requirements: the file path of the listed required packages of main.py that pip should install,
-#                 default: ./requirements.txt
-# --rotation: the rotation of the touch pad (normal, left, right, inverted), default: right
-# --log: the file path of the log file where any messages and errors will be written by main.py,
-#        default: ./out.log
+DESCRIPTION="
+This shell script is only for Raspberry PI (model 4b) with touchpad
+
+Arguments (optional):
+  --venv: the path of the virtual python interpreter, default: ./myvenv
+  --program_dir: the file path of the main python script, default: ./main.py
+  --requirements: the file path of the listed required packages of main.py that pip should install,
+                  default: ./requirements.txt
+  --rotation: the rotation of the touch pad (normal, left, right, inverted), default: right
+  --bt_mac: the the Bluetooth MAC address of the device that will be able to accessed through rfcomm0
+                  default: "" (this case rfcomm0 will not be created and the device will not be paired)
+  --log: the file path of the log file where any messages and errors will be written by main.py,
+         default: ./out.log
+  --help: show the brief description and the possible arguments with their meaning
+"
 
 set -e
 
@@ -28,6 +34,7 @@ ROTATION=right
 VENV=myenv
 QT_PROGRAM=main.py
 LOG_FILE=out.log
+MAC_ADDRESS=""
 REQUIREMENTS_LIST=requirements.txt
 
 
@@ -57,12 +64,21 @@ while [ $# -gt 0 ]; do
             DISPLAY_NAME="$2"
             shift 2
             ;;
+       --bt_mac)
+            MAC_ADDRESS="$2"
+            shift 2
+            ;;
        --log)
             LOG_FILE="$2"
             shift 2
             ;;
+       --help)
+            echo "$DESCRIPTION"
+            exit 0
+            ;;
        *)
             echo "Unknown argument: $1"
+            echo  "$DESCRIPTION"
             exit 1
             ;;
     esac
@@ -90,6 +106,8 @@ apt install -y \
     lightdm \
     python3-xdg \
     python-pip \
+    python3.11-dev \
+    python3-dbus \
     fonts-noto-color-emoji
 
 echo "Enable graphical boot..."
@@ -153,7 +171,7 @@ esac
 
 xrandr --output "$DISPLAY_NAME" --rotate "$XRANDR_ROT"
 
-# Rotating the tochscreen coordination system
+# Rotating the touchscreen coordination system
 TOUCH=\$(xinput list | grep -i touchscreen | sed -E 's/.*id=([0-9]+).*/\1/')
 
 if [ -n "\$TOUCH" ]; then
@@ -184,8 +202,38 @@ fi
 
 deactivate
 
-echo "Enviroment variable DISPLAY=:0 is set in /etc/enviroment"
-echo DISPLAY:=0 >> /etc/enviroment
+echo "Environment variable DISPLAY=:0 is set in /etc/environment"
+echo DISPLAY:=0 >> /etc/environment
+
+if [ "$MAC_ADDRESS" -ne "" ]; then
+    echo "Bluetooth device with address $MAC_ADDRESS is getting paired and binding into rfcomm0"
+    systemctl status bluetooth
+    systemctl start bluetooth
+    rfkill unblock bluetooth
+    bluetoothctl power on
+    bluetoothctl agent on
+    bluetoothctl pair "$MAC_ADDRESS"
+    # create new service: each reboot: rfcomm bind 0 "$MAC_MAC_ADDRESS
+    cat > /etc/systemd/system/rfcomm.service <<EOF
+[Unit]
+Description=RFCOMM bind 0 to "$MAC_ADDRESS"
+After=bluetooth.service
+Requires=bluetooth.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/rfcomm bind 0 "$MAC_ADDRESS"
+ExecStop=/usr/bin/rfcomm release 0
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    chmod 644 /etc/systemd/system/rfcomm.service
+    systemctl daemon-reload
+    systemctl enable --now rfcomm.service
+    echo "Bluetooth pairing & binding are done!"
+fi
 
 echo "Installation and configurations are done!"
 echo "Reboot starts after 5 seconds"
